@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}数据概览 - 水下考古陶片拼合编目系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-speedometer2 text-primary me-2"></i>数据概览
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <span class="text-muted">今日: {{ "now"|strftime("%Y-%m-%d") }}</span>
+                </div>
+            </div>
+            
+            <div class="row g-4 mb-5">
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-grow-1">
+                                    <p class="text-muted mb-1">陶片总数</p>
+                                    <h3 class="mb-0">{{ total_potteries }}</h3>
+                                </div>
+                                <div class="avatar-sm bg-primary bg-opacity-10 rounded">
+                                    <i class="bi bi-archive text-primary h4 mb-0 p-2"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-grow-1">
+                                    <p class="text-muted mb-1">已清洗</p>
+                                    <h3 class="mb-0">{{ total_cleaned }}</h3>
+                                </div>
+                                <div class="avatar-sm bg-success bg-opacity-10 rounded">
+                                    <i class="bi bi-droplet text-success h4 mb-0 p-2"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-grow-1">
+                                    <p class="text-muted mb-1">拼合分组</p>
+                                    <h3 class="mb-0">{{ total_groups }}</h3>
+                                </div>
+                                <div class="avatar-sm bg-warning bg-opacity-10 rounded">
+                                    <i class="bi bi-collection text-warning h4 mb-0 p-2"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-grow-1">
+                                    <p class="text-muted mb-1">正式入库</p>
+                                    <h3 class="mb-0">{{ total_stored }}</h3>
+                                </div>
+                                <div class="avatar-sm bg-info bg-opacity-10 rounded">
+                                    <i class="bi bi-box-seam text-info h4 mb-0 p-2"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="bi bi-pie-chart me-2 text-secondary"></i>残损等级分布
+                            </h5>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>轻微</span>
+                                    <span class="badge bg-success">{{ damage_stats['轻微'] }}</span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" style="width: {{ (damage_stats['轻微'] / total_potteries * 100) if total_potteries > 0 else 0 }}%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>中度</span>
+                                    <span class="badge bg-warning">{{ damage_stats['中度'] }}</span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-warning" style="width: {{ (damage_stats['中度'] / total_potteries * 100) if total_potteries > 0 else 0 }}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-danger">严重</span>
+                                    <span class="badge bg-danger">{{ damage_stats['严重'] }}</span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-danger" style="width: {{ (damage_stats['严重'] / total_potteries * 100) if total_potteries > 0 else 0 }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-8">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="bi bi-clock-history me-2 text-secondary"></i>最近添加的陶片
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>陶片编号</th>
+                                            <th>出水区域</th>
+                                            <th>材质</th>
+                                            <th>残损等级</th>
+                                            <th>状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for p in recent_potteries %}
+                                        <tr onclick="window.location='/potteries/{{ p.id }}'" style="cursor: pointer;">
+                                            <td><strong>{{ p.pottery_number }}</strong></td>
+                                            <td>{{ p.water_area }}</td>
+                                            <td>{{ p.material }}</td>
+                                            <td>
+                                                {% if p.damage_level == '严重' %}
+                                                <span class="damage-severe">{{ p.damage_level }}</span>
+                                                {% else %}
+                                                {{ p.damage_level }}
+                                                {% endif %}
+                                            </td>
+                                            <td><span class="badge bg-secondary">{{ p.current_status }}</span></td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-3">暂无数据</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="bi bi-collection me-2 text-secondary"></i>最近的拼合分组
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>组号</th>
+                                            <th>拼合可信度</th>
+                                            <th>整理人</th>
+                                            <th>陶片数量</th>
+                                            <th>状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for g in recent_groups %}
+                                        <tr onclick="window.location='/groups/{{ g.id }}'" style="cursor: pointer;">
+                                            <td><strong>{{ g.group_number }}</strong></td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress me-2" style="width: 100px; height: 8px;">
+                                                        <div class="progress-bar {% if g.confidence >= 80 %}bg-success{% elif g.confidence >= 50 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ g.confidence }}%"></div>
+                                                    </div>
+                                                    <span>{{ g.confidence }}%</span>
+                                                </div>
+                                            </td>
+                                            <td>{{ g.organizer }}</td>
+                                            <td><span class="badge bg-primary">{{ g.members|length }} 件</span></td>
+                                            <td>
+                                                {% if g.is_completed %}
+                                                <span class="badge bg-success">已完成</span>
+                                                {% else %}
+                                                <span class="badge bg-warning">进行中</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-3">暂无数据</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

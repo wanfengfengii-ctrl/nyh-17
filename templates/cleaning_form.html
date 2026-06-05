@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}添加清洗记录 - {{ pottery.pottery_number }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-droplet text-primary me-2"></i>添加清洗记录
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/potteries/{{ pottery.id }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>返回详情
+                    </a>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                正在为陶片 <strong>{{ pottery.pottery_number }}</strong> 添加清洗记录
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="cleaning_date" class="form-label">清洗日期 <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="cleaning_date" name="cleaning_date" 
+                                   value="{{ today }}" max="{{ today }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="cleaner" class="form-label">清洗人 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="cleaner" name="cleaner" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="cleaning_method" class="form-label">清洗方式 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="cleaning_method" name="cleaning_method" required>
+                                <option value="">请选择</option>
+                                <option value="清水冲洗">清水冲洗</option>
+                                <option value="软毛刷清洗">软毛刷清洗</option>
+                                <option value="超声波清洗">超声波清洗</option>
+                                <option value="化学试剂清洗">化学试剂清洗</option>
+                                <option value="机械清理">机械清理</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="cleaning_result" class="form-label">清洗结果 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="cleaning_result" name="cleaning_result" required>
+                                <option value="">请选择</option>
+                                <option value="优秀">优秀</option>
+                                <option value="良好">良好</option>
+                                <option value="一般">一般</option>
+                                <option value="需二次清洗">需二次清洗</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="notes" class="form-label">备注</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="col-12 pt-4 border-top">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-save me-1"></i>保存记录
+                            </button>
+                            <a href="/potteries/{{ pottery.id }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>取消
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

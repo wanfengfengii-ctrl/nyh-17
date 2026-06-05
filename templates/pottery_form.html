@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{% if pottery %}编辑陶片{% else %}新增陶片{% endif %} - 水下考古陶片拼合编目系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-{% if pottery %}pencil{% else %}plus-circle{% endif %} text-primary me-2"></i>
+                    {% if pottery %}编辑陶片{% else %}新增陶片{% endif %}
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/potteries" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>返回列表
+                    </a>
+                </div>
+            </div>
+            
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="pottery_number" class="form-label">陶片编号 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="pottery_number" name="pottery_number" 
+                                   value="{{ pottery.pottery_number if pottery else '' }}" 
+                                   {% if pottery %}readonly{% endif %} required>
+                            {% if pottery %}<small class="text-muted">编号不可修改</small>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="water_area" class="form-label">出水区域 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="water_area" name="water_area" 
+                                   value="{{ pottery.water_area if pottery else '' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="trench_number" class="form-label">探方编号 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="trench_number" name="trench_number" 
+                                   value="{{ pottery.trench_number if pottery else '' }}" required>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="material" class="form-label">材质 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="material" name="material" required>
+                                <option value="">请选择</option>
+                                <option value="泥质陶" {% if pottery and pottery.material == '泥质陶' %}selected{% endif %}>泥质陶</option>
+                                <option value="夹砂陶" {% if pottery and pottery.material == '夹砂陶' %}selected{% endif %}>夹砂陶</option>
+                                <option value="硬质陶" {% if pottery and pottery.material == '硬质陶' %}selected{% endif %}>硬质陶</option>
+                                <option value="釉陶" {% if pottery and pottery.material == '釉陶' %}selected{% endif %}>釉陶</option>
+                                <option value="青瓷" {% if pottery and pottery.material == '青瓷' %}selected{% endif %}>青瓷</option>
+                                <option value="白瓷" {% if pottery and pottery.material == '白瓷' %}selected{% endif %}>白瓷</option>
+                                <option value="青花瓷" {% if pottery and pottery.material == '青花瓷' %}selected{% endif %}>青花瓷</option>
+                                <option value="其他" {% if pottery and pottery.material == '其他' %}selected{% endif %}>其他</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="damage_level" class="form-label">残损等级 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="damage_level" name="damage_level" required>
+                                <option value="">请选择</option>
+                                <option value="轻微" {% if pottery and pottery.damage_level == '轻微' %}selected{% endif %}>轻微</option>
+                                <option value="中度" {% if pottery and pottery.damage_level == '中度' %}selected{% endif %}>中度</option>
+                                <option value="严重" {% if pottery and pottery.damage_level == '严重' %}selected{% endif %}>严重</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="current_status" class="form-label">当前状态 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="current_status" name="current_status" required>
+                                <option value="">请选择</option>
+                                <option value="待清洗" {% if pottery and pottery.current_status == '待清洗' %}selected{% endif %}>待清洗</option>
+                                <option value="清洗中" {% if pottery and pottery.current_status == '清洗中' %}selected{% endif %}>清洗中</option>
+                                <option value="已清洗" {% if pottery and pottery.current_status == '已清洗' %}selected{% endif %}>已清洗</option>
+                                <option value="拼合中" {% if pottery and pottery.current_status == '拼合中' %}selected{% endif %}>拼合中</option>
+                                <option value="已入库" {% if pottery and pottery.current_status == '已入库' %}selected{% endif %}>已入库</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="recovery_date" class="form-label">出水日期 <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="recovery_date" name="recovery_date" 
+                                   value="{{ pottery.recovery_date if pottery else today }}" 
+                                   max="{{ today }}" required>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="decoration_description" class="form-label">纹饰描述 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="decoration_description" name="decoration_description" 
+                                      rows="1" required>{{ pottery.decoration_description if pottery else '' }}</textarea>
+                        </div>
+                        
+                        <div class="col-12 pt-4 border-top">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-save me-1"></i>保存
+                            </button>
+                            <a href="/potteries" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>取消
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

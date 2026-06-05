@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}新增入库 - 水下考古陶片拼合编目系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-plus-circle text-primary me-2"></i>新增入库
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/storage" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>返回列表
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="pottery_id" class="form-label">选择陶片 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="pottery_id" name="pottery_id" required>
+                                <option value="">请选择陶片</option>
+                                {% for p in available_potteries %}
+                                <option value="{{ p.id }}">
+                                    {{ p.pottery_number }} - {{ p.material }}
+                                    {% if p.damage_level == '严重' %}
+                                    (严重残损)
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if not available_potteries %}
+                            <small class="text-danger">所有陶片已完成入库登记</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="storage_date" class="form-label">入库日期 <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="storage_date" name="storage_date" 
+                                   value="{{ today }}" max="{{ today }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="registrar" class="form-label">登记人 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="registrar" name="registrar" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="location" class="form-label">存放位置 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="location" name="location" 
+                                   placeholder="如：A区-3号柜-第2层" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="is_official" class="form-label">入库类型</label>
+                            <select class="form-select" id="is_official" name="is_official">
+                                <option value="false">临时存放</option>
+                                <option value="true">正式入库</option>
+                            </select>
+                            <small class="text-muted">正式入库的陶片将无法修改拼合关系</small>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="notes" class="form-label">备注</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="col-12 pt-4 border-top">
+                            <button type="submit" class="btn btn-primary me-2" {% if not available_potteries %}disabled{% endif %}>
+                                <i class="bi bi-save me-1"></i>保存
+                            </button>
+                            <a href="/storage" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>取消
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}拼合分组 - 水下考古陶片拼合编目系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-collection text-primary me-2"></i>拼合分组
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/groups/add" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>新建分组
+                    </a>
+                </div>
+            </div>
+            
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">完成状态</label>
+                            <select class="form-select" name="is_completed">
+                                <option value="">全部</option>
+                                <option value="false" {% if is_completed == 'false' %}selected{% endif %}>进行中</option>
+                                <option value="true" {% if is_completed == 'true' %}selected{% endif %}>已完成</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-filter me-1"></i>筛选
+                            </button>
+                            <a href="/groups" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise me-1"></i>重置
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="row g-4">
+                {% for g in groups %}
+                <div class="col-md-6 col-xl-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="card-title mb-1">
+                                        <i class="bi bi-folder me-1 text-primary"></i>{{ g.group_number }}
+                                    </h5>
+                                    <p class="text-muted small mb-0">整理人: {{ g.organizer }}</p>
+                                </div>
+                                {% if g.is_completed %}
+                                <span class="badge bg-success">已完成</span>
+                                {% else %}
+                                <span class="badge bg-warning">进行中</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="text-muted small">拼合可信度</label>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-2" style="height: 10px;">
+                                        <div class="progress-bar {% if g.confidence >= 80 %}bg-success{% elif g.confidence >= 50 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ g.confidence }}%"></div>
+                                    </div>
+                                    <span class="fw-bold">{{ g.confidence }}%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <span class="badge bg-secondary badge-confidence">
+                                    <i class="bi bi-layers me-1"></i>{{ g.members|length }} 件陶片
+                                </span>
+                            </div>
+                            
+                            {% if g.notes %}
+                            <p class="text-muted small mb-3">{{ g.notes|truncate(50) }}</p>
+                            {% endif %}
+                            
+                            <div class="d-flex gap-2">
+                                <a href="/groups/{{ g.id }}" class="btn btn-sm btn-outline-primary flex-grow-1">
+                                    <i class="bi bi-eye me-1"></i>查看
+                                </a>
+                                {% if not g.is_completed %}
+                                <a href="/groups/{{ g.id }}/edit" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-collection text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-3 mb-0">暂无拼合分组数据</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

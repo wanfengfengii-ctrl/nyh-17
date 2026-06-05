@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{% if group %}编辑拼合组{% else %}新建拼合组{% endif %} - 水下考古陶片拼合编目系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-{% if group %}pencil{% else %}plus-circle{% endif %} text-primary me-2"></i>
+                    {% if group %}编辑拼合组{% else %}新建拼合组{% endif %}
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/groups" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>返回列表
+                    </a>
+                </div>
+            </div>
+            
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="group_number" class="form-label">组号 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="group_number" name="group_number" 
+                                   value="{{ group.group_number if group else '' }}" 
+                                   {% if group %}readonly{% endif %} required>
+                            {% if group %}<small class="text-muted">组号不可修改</small>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="confidence" class="form-label">拼合可信度 (0-100) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="confidence" name="confidence" 
+                                       value="{{ group.confidence if group else 80 }}" 
+                                       min="0" max="100" required>
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="organizer" class="form-label">整理人 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="organizer" name="organizer" 
+                                   value="{{ group.organizer if group else '' }}" required>
+                        </div>
+                        
+                        {% if group %}
+                        <div class="col-md-4">
+                            <label for="is_completed" class="form-label">完成状态</label>
+                            <select class="form-select" id="is_completed" name="is_completed">
+                                <option value="false" {% if not group.is_completed %}selected{% endif %}>进行中</option>
+                                <option value="true" {% if group.is_completed %}selected{% endif %}>已完成</option>
+                            </select>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="col-md-{% if group %}8{% else %}12{% endif %}">
+                            <label for="notes" class="form-label">备注</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="1">{{ group.notes if group else '' }}</textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label">选择陶片</label>
+                            <div class="card border">
+                                <div class="card-body p-2" style="max-height: 300px; overflow-y: auto;">
+                                    {% if available_potteries %}
+                                    <div class="row">
+                                        {% for p in available_potteries %}
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       name="pottery_ids" value="{{ p.id }}" 
+                                                       id="pottery_{{ p.id }}"
+                                                       {% if p.id in selected_potteries %}checked{% endif %}>
+                                                <label class="form-check-label" for="pottery_{{ p.id }}">
+                                                    {{ p.pottery_number }}
+                                                    {% if p.damage_level == '严重' %}
+                                                    <span class="text-danger">(严重)</span>
+                                                    {% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <p class="text-muted text-center mb-0">暂无可用陶片（已入库或已在其他进行中的分组中）</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <small class="text-muted">提示：已正式入库的陶片和已在其他进行中分组的陶片不会显示在此列表中</small>
+                        </div>
+                        
+                        <div class="col-12 pt-4 border-top">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-save me-1"></i>保存
+                            </button>
+                            <a href="/groups" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>取消
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

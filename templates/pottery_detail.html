@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}{{ pottery.pottery_number }} - 陶片详情{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-file-earmark-text text-primary me-2"></i>陶片详情
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/potteries/{{ pottery.id }}/edit" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-pencil me-1"></i>编辑
+                    </a>
+                    <a href="/potteries" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>返回列表
+                    </a>
+                </div>
+            </div>
+            
+            <div class="row g-4 mb-4">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-info-circle me-2 text-secondary"></i>基本信息
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="text-muted small">陶片编号</label>
+                                    <p class="fw-bold mb-0">{{ pottery.pottery_number }}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-muted small">出水区域</label>
+                                    <p class="mb-0">{{ pottery.water_area }}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-muted small">探方编号</label>
+                                    <p class="mb-0">{{ pottery.trench_number }}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-muted small">材质</label>
+                                    <p class="mb-0">{{ pottery.material }}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-muted small">残损等级</label>
+                                    <p class="mb-0">
+                                        {% if pottery.damage_level == '严重' %}
+                                        <span class="damage-severe">{{ pottery.damage_level }}</span>
+                                        {% else %}
+                                        {{ pottery.damage_level }}
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-muted small">当前状态</label>
+                                    <p class="mb-0">
+                                        {% if pottery.current_status == '已入库' %}
+                                        <span class="badge bg-success">{{ pottery.current_status }}</span>
+                                        {% elif pottery.current_status == '已清洗' %}
+                                        <span class="badge bg-info">{{ pottery.current_status }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ pottery.current_status }}</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-muted small">出水日期</label>
+                                    <p class="mb-0">{{ pottery.recovery_date }}</p>
+                                </div>
+                                <div class="col-12">
+                                    <label class="text-muted small">纹饰描述</label>
+                                    <p class="mb-0">{{ pottery.decoration_description }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    {% if storage_record %}
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-box-seam me-2 text-secondary"></i>入库信息
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="text-muted small">入库日期</label>
+                                <p class="mb-0">{{ storage_record.storage_date }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small">存放位置</label>
+                                <p class="mb-0">{{ storage_record.location }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small">登记人</label>
+                                <p class="mb-0">{{ storage_record.registrar }}</p>
+                            </div>
+                            <div>
+                                {% if storage_record.is_official %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>正式入库</span>
+                                {% else %}
+                                <span class="badge bg-warning">临时存放</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if groups %}
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-collection me-2 text-secondary"></i>所属拼合组
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% for g in groups %}
+                            <div class="mb-2">
+                                <a href="/groups/{{ g.id }}" class="text-decoration-none">
+                                    <i class="bi bi-folder me-1"></i>{{ g.group_number }}
+                                </a>
+                                {% if g.is_completed %}
+                                <span class="badge bg-success ms-1">已完成</span>
+                                {% else %}
+                                <span class="badge bg-warning ms-1">进行中</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-droplet me-2 text-secondary"></i>清洗记录
+                    </h5>
+                    <a href="/potteries/{{ pottery.id }}/cleaning/add" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>添加记录
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>清洗日期</th>
+                                    <th>清洗人</th>
+                                    <th>清洗方式</th>
+                                    <th>清洗结果</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in cleaning_records %}
+                                <tr>
+                                    <td>{{ r.cleaning_date }}</td>
+                                    <td>{{ r.cleaner }}</td>
+                                    <td>{{ r.cleaning_method }}</td>
+                                    <td>{{ r.cleaning_result }}</td>
+                                    <td>{{ r.notes or '-' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">暂无清洗记录</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

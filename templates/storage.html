@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}入库登记 - 水下考古陶片拼合编目系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-box-seam text-primary me-2"></i>入库登记
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/storage/add" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>新增入库
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">入库类型</label>
+                            <select class="form-select" name="is_official">
+                                <option value="">全部</option>
+                                <option value="false" {% if is_official == 'false' %}selected{% endif %}>临时存放</option>
+                                <option value="true" {% if is_official == 'true' %}selected{% endif %}>正式入库</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-filter me-1"></i>筛选
+                            </button>
+                            <a href="/storage" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise me-1"></i>重置
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>陶片编号</th>
+                                    <th>入库日期</th>
+                                    <th>存放位置</th>
+                                    <th>登记人</th>
+                                    <th>类型</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in records %}
+                                <tr>
+                                    <td>
+                                        <a href="/potteries/{{ r.pottery.id }}" class="text-decoration-none">
+                                            <strong>{{ r.pottery.pottery_number }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>{{ r.storage_date }}</td>
+                                    <td>{{ r.location }}</td>
+                                    <td>{{ r.registrar }}</td>
+                                    <td>
+                                        {% if r.is_official %}
+                                        <span class="badge bg-success">正式入库</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">临时存放</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ r.notes or '-' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                        <p class="mt-2 mb-0">暂无入库记录</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

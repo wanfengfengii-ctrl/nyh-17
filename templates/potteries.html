@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}陶片档案 - 水下考古陶片拼合编目系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-archive text-primary me-2"></i>陶片档案
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/potteries/add" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>新增陶片
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">关键词搜索</label>
+                            <input type="text" class="form-control" name="keyword" value="{{ keyword or '' }}" placeholder="编号、材质、纹饰...">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">出水区域</label>
+                            <select class="form-select" name="water_area">
+                                <option value="">全部</option>
+                                {% for area in water_areas %}
+                                <option value="{{ area }}" {% if water_area == area %}selected{% endif %}>{{ area }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">残损等级</label>
+                            <select class="form-select" name="damage_level">
+                                <option value="">全部</option>
+                                <option value="轻微" {% if damage_level == '轻微' %}selected{% endif %}>轻微</option>
+                                <option value="中度" {% if damage_level == '中度' %}selected{% endif %}>中度</option>
+                                <option value="严重" {% if damage_level == '严重' %}selected{% endif %}>严重</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">当前状态</label>
+                            <select class="form-select" name="current_status">
+                                <option value="">全部</option>
+                                <option value="待清洗" {% if current_status == '待清洗' %}selected{% endif %}>待清洗</option>
+                                <option value="清洗中" {% if current_status == '清洗中' %}selected{% endif %}>清洗中</option>
+                                <option value="已清洗" {% if current_status == '已清洗' %}selected{% endif %}>已清洗</option>
+                                <option value="拼合中" {% if current_status == '拼合中' %}selected{% endif %}>拼合中</option>
+                                <option value="已入库" {% if current_status == '已入库' %}selected{% endif %}>已入库</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-search me-1"></i>筛选
+                            </button>
+                            <a href="/potteries" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise me-1"></i>重置
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>陶片编号</th>
+                                    <th>出水区域</th>
+                                    <th>探方编号</th>
+                                    <th>材质</th>
+                                    <th>残损等级</th>
+                                    <th>当前状态</th>
+                                    <th>出水日期</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in potteries %}
+                                <tr>
+                                    <td><strong>{{ p.pottery_number }}</strong></td>
+                                    <td>{{ p.water_area }}</td>
+                                    <td>{{ p.trench_number }}</td>
+                                    <td>{{ p.material }}</td>
+                                    <td>
+                                        {% if p.damage_level == '严重' %}
+                                        <span class="damage-severe">{{ p.damage_level }}</span>
+                                        {% else %}
+                                        {{ p.damage_level }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if p.current_status == '已入库' %}
+                                        <span class="badge bg-success">{{ p.current_status }}</span>
+                                        {% elif p.current_status == '已清洗' %}
+                                        <span class="badge bg-info">{{ p.current_status }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ p.current_status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ p.recovery_date }}</td>
+                                    <td>
+                                        <a href="/potteries/{{ p.id }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="/potteries/{{ p.id }}/edit" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                        <p class="mt-2 mb-0">暂无陶片数据</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
