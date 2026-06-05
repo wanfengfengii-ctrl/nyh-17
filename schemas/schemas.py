@@ -6,6 +6,7 @@ from typing import Optional, List
 class UserBase(BaseModel):
     username: str
     full_name: Optional[str] = None
+    role: Optional[str] = "修复员"
 
 
 class UserCreate(UserBase):
@@ -29,6 +30,26 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 
+class PotteryImageBase(BaseModel):
+    pottery_id: int
+    image_path: str
+    image_type: str
+    description: Optional[str] = None
+
+
+class PotteryImageCreate(PotteryImageBase):
+    uploaded_by: int
+
+
+class PotteryImage(PotteryImageBase):
+    id: int
+    uploaded_by: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class CleaningRecordBase(BaseModel):
     cleaning_date: date
     cleaner: str
@@ -50,21 +71,91 @@ class CleaningRecord(CleaningRecordBase):
         from_attributes = True
 
 
+class RepairTaskBase(BaseModel):
+    pottery_id: int
+    title: str
+    description: Optional[str] = None
+    priority: Optional[str] = "普通"
+    status: Optional[str] = "待处理"
+    assignee_id: Optional[int] = None
+    due_date: Optional[date] = None
+
+
+class RepairTaskCreate(RepairTaskBase):
+    pass
+
+
+class RepairTaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    assignee_id: Optional[int] = None
+    due_date: Optional[date] = None
+    completed_date: Optional[date] = None
+    result: Optional[str] = None
+
+
+class RepairTask(RepairTaskBase):
+    id: int
+    task_number: str
+    creator_id: int
+    completed_date: Optional[date] = None
+    result: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    creator: Optional[User] = None
+    assignee: Optional[User] = None
+
+    class Config:
+        from_attributes = True
+
+
 class StorageRecordBase(BaseModel):
     storage_date: date
     location: str
     registrar: str
     notes: Optional[str] = None
     is_official: bool = False
+    approval_status: Optional[str] = "草稿"
 
 
 class StorageRecordCreate(StorageRecordBase):
     pottery_id: int
 
 
+class StorageRecordUpdate(BaseModel):
+    storage_date: Optional[date] = None
+    location: Optional[str] = None
+    registrar: Optional[str] = None
+    notes: Optional[str] = None
+    is_official: Optional[bool] = None
+    approval_status: Optional[str] = None
+
+
 class StorageRecord(StorageRecordBase):
     id: int
     pottery_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class StorageApprovalBase(BaseModel):
+    storage_id: int
+    approval_status: str
+    comments: Optional[str] = None
+
+
+class StorageApprovalCreate(StorageApprovalBase):
+    approver_id: int
+
+
+class StorageApproval(StorageApprovalBase):
+    id: int
+    approver_id: int
     created_at: datetime
 
     class Config:
@@ -80,6 +171,7 @@ class PotteryBase(BaseModel):
     damage_level: str
     current_status: str
     recovery_date: date
+    is_locked: Optional[bool] = False
 
     @validator('recovery_date')
     def recovery_date_not_future(cls, v):
@@ -100,6 +192,7 @@ class PotteryUpdate(BaseModel):
     damage_level: Optional[str] = None
     current_status: Optional[str] = None
     recovery_date: Optional[date] = None
+    is_locked: Optional[bool] = None
 
     @validator('recovery_date')
     def recovery_date_not_future(cls, v):
@@ -114,6 +207,8 @@ class Pottery(PotteryBase):
     updated_at: Optional[datetime] = None
     cleaning_records: List[CleaningRecord] = []
     storage_record: Optional[StorageRecord] = None
+    images: List[PotteryImage] = []
+    repair_tasks: List[RepairTask] = []
 
     class Config:
         from_attributes = True
@@ -136,12 +231,36 @@ class PotteryGroupMember(PotteryGroupMemberBase):
         from_attributes = True
 
 
+class GroupVersionBase(BaseModel):
+    group_id: int
+    version_number: int
+    confidence: int
+    organizer: str
+    notes: Optional[str] = None
+    pottery_ids: str
+    change_description: Optional[str] = None
+
+
+class GroupVersionCreate(GroupVersionBase):
+    created_by: int
+
+
+class GroupVersion(GroupVersionBase):
+    id: int
+    created_by: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class PotteryGroupBase(BaseModel):
     group_number: str
     confidence: int = Field(..., ge=0, le=100)
     organizer: str
     notes: Optional[str] = None
     is_completed: bool = False
+    current_version: Optional[int] = 1
 
 
 class PotteryGroupCreate(PotteryGroupBase):
@@ -154,12 +273,37 @@ class PotteryGroupUpdate(BaseModel):
     notes: Optional[str] = None
     is_completed: Optional[bool] = None
     pottery_ids: Optional[List[int]] = None
+    change_description: Optional[str] = None
 
 
 class PotteryGroup(PotteryGroupBase):
     id: int
     created_at: datetime
+    updated_at: Optional[datetime] = None
     members: List[PotteryGroupMember] = []
+    versions: List[GroupVersion] = []
+
+    class Config:
+        from_attributes = True
+
+
+class OperationLogBase(BaseModel):
+    user_id: int
+    operation_type: str
+    target_type: str
+    target_id: int
+    description: Optional[str] = None
+    ip_address: Optional[str] = None
+
+
+class OperationLogCreate(OperationLogBase):
+    pass
+
+
+class OperationLog(OperationLogBase):
+    id: int
+    created_at: datetime
+    user: Optional[User] = None
 
     class Config:
         from_attributes = True

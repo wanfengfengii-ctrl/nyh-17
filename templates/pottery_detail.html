@@ -13,14 +13,25 @@
                     <i class="bi bi-file-earmark-text text-primary me-2"></i>陶片详情
                 </h1>
                 <div class="btn-toolbar mb-2 mb-md-0">
+                    {% if not pottery.is_locked %}
                     <a href="/potteries/{{ pottery.id }}/edit" class="btn btn-outline-primary me-2">
                         <i class="bi bi-pencil me-1"></i>编辑
                     </a>
+                    {% else %}
+                    <span class="badge bg-danger me-2"><i class="bi bi-lock-fill"></i> 已锁定</span>
+                    {% endif %}
                     <a href="/potteries" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left me-1"></i>返回列表
                     </a>
                 </div>
             </div>
+            
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
             
             <div class="row g-4 mb-4">
                 <div class="col-lg-8">
@@ -28,6 +39,9 @@
                         <div class="card-header bg-white">
                             <h5 class="mb-0">
                                 <i class="bi bi-info-circle me-2 text-secondary"></i>基本信息
+                                {% if pottery.is_locked %}
+                                <span class="badge bg-danger ms-2"><i class="bi bi-lock-fill"></i> 已锁定</span>
+                                {% endif %}
                             </h5>
                         </div>
                         <div class="card-body">
@@ -104,6 +118,20 @@
                                 <label class="text-muted small">登记人</label>
                                 <p class="mb-0">{{ storage_record.registrar }}</p>
                             </div>
+                            <div class="mb-3">
+                                <label class="text-muted small">审批状态</label>
+                                <p class="mb-0">
+                                    {% if storage_record.approval_status == '草稿' %}
+                                    <span class="badge bg-secondary">草稿</span>
+                                    {% elif storage_record.approval_status == '待审批' %}
+                                    <span class="badge bg-warning">待审批</span>
+                                    {% elif storage_record.approval_status == '已通过' %}
+                                    <span class="badge bg-success">已通过</span>
+                                    {% elif storage_record.approval_status == '已驳回' %}
+                                    <span class="badge bg-danger">已驳回</span>
+                                    {% endif %}
+                                </p>
+                            </div>
                             <div>
                                 {% if storage_record.is_official %}
                                 <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>正式入库</span>
@@ -116,7 +144,7 @@
                     {% endif %}
                     
                     {% if groups %}
-                    <div class="card shadow-sm">
+                    <div class="card shadow-sm mb-4">
                         <div class="card-header bg-white">
                             <h5 class="mb-0">
                                 <i class="bi bi-collection me-2 text-secondary"></i>所属拼合组
@@ -138,10 +166,90 @@
                         </div>
                     </div>
                     {% endif %}
+                    
+                    {% if repair_tasks %}
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="bi bi-list-check me-2 text-secondary"></i>修复任务
+                            </h5>
+                            <span class="badge bg-primary">{{ repair_tasks|length }}</span>
+                        </div>
+                        <div class="card-body">
+                            {% for t in repair_tasks %}
+                            <div class="mb-2">
+                                <a href="/tasks/{{ t.id }}" class="text-decoration-none">
+                                    <i class="bi bi-clipboard me-1"></i>{{ t.title }}
+                                </a>
+                                {% if t.status == '待处理' %}
+                                <span class="badge bg-secondary ms-1">待处理</span>
+                                {% elif t.status == '进行中' %}
+                                <span class="badge bg-primary ms-1">进行中</span>
+                                {% elif t.status == '已完成' %}
+                                <span class="badge bg-success ms-1">已完成</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             
-            <div class="card shadow-sm">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-image me-2 text-secondary"></i>陶片图片
+                    </h5>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i class="bi bi-plus-lg me-1"></i>上传图片
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if pottery.images %}
+                    <div class="row g-3">
+                        {% for img in pottery.images %}
+                        <div class="col-md-3">
+                            <div class="card">
+                                <img src="{{ img.image_path }}" class="card-img-top" alt="{{ img.description }}" style="height: 150px; object-fit: cover; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#imageModal{{ img.id }}">
+                                <div class="card-body p-2">
+                                    <p class="card-text small mb-1">
+                                        <span class="badge bg-info">{{ img.image_type }}</span>
+                                    </p>
+                                    <p class="card-text small text-muted">{{ img.description or '无描述' }}</p>
+                                    <a href="/potteries/{{ pottery.id }}/images/{{ img.id }}/delete" class="btn btn-sm btn-outline-danger w-100" onclick="return confirm('确定删除这张图片吗？')">
+                                        <i class="bi bi-trash"></i> 删除
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal fade" id="imageModal{{ img.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">{{ img.image_type }} - {{ pottery.pottery_number }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body text-center">
+                                        <img src="{{ img.image_path }}" class="img-fluid" alt="{{ img.description }}">
+                                        <p class="mt-3 text-muted">{{ img.description }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-image" style="font-size: 3rem;"></i>
+                        <p class="mt-3">暂无图片，请上传陶片照片</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="bi bi-droplet me-2 text-secondary"></i>清洗记录
@@ -178,6 +286,45 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal fade" id="uploadModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">上传陶片图片</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="POST" action="/potteries/{{ pottery.id }}/images/upload" enctype="multipart/form-data">
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label for="image" class="form-label">选择图片 <span class="text-danger">*</span></label>
+                                    <input type="file" class="form-control" id="image" name="image" accept="image/*" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="image_type" class="form-label">图片类型 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="image_type" name="image_type" required>
+                                        <option value="">请选择类型</option>
+                                        <option value="正面">正面</option>
+                                        <option value="背面">背面</option>
+                                        <option value="侧面">侧面</option>
+                                        <option value="细节">细节</option>
+                                        <option value="修复前">修复前</option>
+                                        <option value="修复后">修复后</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">描述</label>
+                                    <textarea class="form-control" id="description" name="description" rows="2" placeholder="可选描述"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                <button type="submit" class="btn btn-primary">上传</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>

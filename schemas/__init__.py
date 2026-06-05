@@ -2,7 +2,12 @@ from schemas.schemas import (
     User, UserCreate,
     Token, TokenData,
     Pottery, PotteryCreate, PotteryUpdate,
+    PotteryImage, PotteryImageCreate,
     CleaningRecord, CleaningRecordCreate,
+    RepairTask, RepairTaskCreate, RepairTaskUpdate,
     PotteryGroup, PotteryGroupCreate, PotteryGroupUpdate,
-    StorageRecord, StorageRecordCreate
+    GroupVersion, GroupVersionCreate,
+    StorageRecord, StorageRecordCreate, StorageRecordUpdate,
+    StorageApproval, StorageApprovalCreate,
+    OperationLog, OperationLogCreate
 )

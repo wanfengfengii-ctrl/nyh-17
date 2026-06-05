@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}报表导出 - 陶片修复协同与审批管理系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-file-earmark-spreadsheet text-primary me-2"></i>报表导出
+                </h1>
+            </div>
+            
+            {% if not excel_available %}
+            <div class="alert alert-warning" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                未检测到 openpyxl 库，Excel 导出功能不可用。请运行: <code>pip install openpyxl</code>
+            </div>
+            {% endif %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-archive me-2"></i>陶片档案报表
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="GET" action="/reports/export">
+                                <input type="hidden" name="report_type" value="potteries">
+                                <div class="mb-3">
+                                    <label for="water_area" class="form-label">按水域筛选</label>
+                                    <select class="form-select" id="water_area" name="water_area">
+                                        <option value="">全部水域</option>
+                                        {% for wa in water_areas %}
+                                        <option value="{{ wa }}">{{ wa }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="material" class="form-label">按材质筛选</label>
+                                    <select class="form-select" id="material" name="material">
+                                        <option value="">全部材质</option>
+                                        {% for m in materials %}
+                                        <option value="{{ m }}">{{ m }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="current_status" class="form-label">按状态筛选</label>
+                                    <select class="form-select" id="current_status" name="current_status">
+                                        <option value="">全部状态</option>
+                                        {% for s in statuses %}
+                                        <option value="{{ s }}">{{ s }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-success w-100" {% if not excel_available %}disabled{% endif %}>
+                                    <i class="bi bi-file-earmark-excel me-2"></i>导出 Excel
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-box-seam me-2"></i>入库记录报表
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="GET" action="/reports/export">
+                                <input type="hidden" name="report_type" value="storage">
+                                <p class="text-muted mb-4">导出所有入库记录，包含陶片编号、入库日期、存放位置、登记人、是否正式入库、审批状态等信息。</p>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-success" {% if not excel_available %}disabled{% endif %}>
+                                        <i class="bi bi-file-earmark-excel me-2"></i>导出入库记录 Excel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-info-circle me-2"></i>导出说明
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled small text-muted">
+                                <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>支持按水域、材质、状态筛选陶片</li>
+                                <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>导出格式为 Microsoft Excel (.xlsx)</li>
+                                <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>自动设置表头样式和列宽</li>
+                                <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>陶片档案按编号排序</li>
+                                <li><i class="bi bi-check2 text-success me-2"></i>入库记录按日期倒序排列</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

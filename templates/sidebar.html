@@ -1,8 +1,8 @@
 <div class="sidebar col-md-3 col-lg-2 d-md-block p-0">
     <div class="position-sticky pt-3">
         <div class="text-center mb-4 px-3">
-            <i class="bi bi-water text-white" style="font-size: 2.5rem;"></i>
-            <h6 class="text-white mt-2 mb-0">水下考古陶片系统</h6>
+            <i class="bi bi-bricks text-white" style="font-size: 2.5rem;"></i>
+            <h6 class="text-white mt-2 mb-0">陶片修复管理系统</h6>
         </div>
         
         <ul class="nav flex-column">
@@ -16,6 +16,12 @@
                 <a class="nav-link {% if '/potteries' in request.url.path %}active{% endif %}" href="/potteries">
                     <i class="bi bi-archive"></i>
                     陶片档案
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/tasks' in request.url.path %}active{% endif %}" href="/tasks">
+                    <i class="bi bi-list-check"></i>
+                    修复任务
                 </a>
             </li>
             <li class="nav-item">
@@ -40,11 +46,31 @@
         
         <hr class="text-white-50 mx-3">
         
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link {% if '/reports' in request.url.path %}active{% endif %}" href="/reports">
+                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                    报表导出
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/logs' in request.url.path %}active{% endif %}" href="/logs">
+                    <i class="bi bi-clock-history"></i>
+                    操作日志
+                </a>
+            </li>
+        </ul>
+        
+        <hr class="text-white-50 mx-3">
+        
         <div class="px-3">
             <div class="text-white-50 small mb-2">当前用户</div>
-            <div class="text-white mb-2">
+            <div class="text-white mb-1">
                 <i class="bi bi-person-circle me-1"></i>
                 {{ current_user.full_name or current_user.username }}
+            </div>
+            <div class="text-white-50 small mb-2">
+                <span class="badge bg-info">{{ current_user.role }}</span>
             </div>
             <a href="/logout" class="btn btn-outline-light btn-sm w-100">
                 <i class="bi bi-box-arrow-right me-1"></i>

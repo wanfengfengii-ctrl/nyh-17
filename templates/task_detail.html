@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}任务详情 - 陶片修复协同与审批管理系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-clipboard-check text-primary me-2"></i>任务详情
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/tasks" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>返回列表
+                    </a>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0">{{ task.title }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-sm-3 text-muted">任务编号</div>
+                                <div class="col-sm-9"><code>{{ task.task_number }}</code></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-3 text-muted">关联陶片</div>
+                                <div class="col-sm-9">
+                                    <a href="/potteries/{{ task.pottery.id }}">{{ task.pottery.pottery_number }}</a>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-3 text-muted">优先级</div>
+                                <div class="col-sm-9">
+                                    {% if task.priority == '高' %}
+                                    <span class="badge bg-danger">高优先级</span>
+                                    {% elif task.priority == '普通' %}
+                                    <span class="badge bg-warning">普通优先级</span>
+                                    {% else %}
+                                    <span class="badge bg-info">低优先级</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-3 text-muted">状态</div>
+                                <div class="col-sm-9">
+                                    {% if task.status == '待处理' %}
+                                    <span class="badge bg-secondary">待处理</span>
+                                    {% elif task.status == '进行中' %}
+                                    <span class="badge bg-primary">进行中</span>
+                                    {% elif task.status == '已完成' %}
+                                    <span class="badge bg-success">已完成</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-dark">已取消</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-3 text-muted">创建人</div>
+                                <div class="col-sm-9">{{ task.creator.full_name if task.creator else '-' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-3 text-muted">分派给</div>
+                                <div class="col-sm-9">{{ task.assignee.full_name if task.assignee else '未分派' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-3 text-muted">截止日期</div>
+                                <div class="col-sm-9">{{ task.due_date|strftime if task.due_date else '-' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-3 text-muted">完成日期</div>
+                                <div class="col-sm-9">{{ task.completed_date|strftime if task.completed_date else '-' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-3 text-muted">任务描述</div>
+                                <div class="col-sm-9">{{ task.description or '暂无描述' }}</div>
+                            </div>
+                            {% if task.result %}
+                            <div class="row">
+                                <div class="col-sm-3 text-muted">修复结果</div>
+                                <div class="col-sm-9">{{ task.result }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white">
+                            <h6 class="card-title mb-0">编辑任务</h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="/tasks/{{ task.id }}/edit">
+                                <div class="mb-3">
+                                    <label for="title" class="form-label">任务标题</label>
+                                    <input type="text" class="form-control" id="title" name="title" value="{{ task.title }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">任务描述</label>
+                                    <textarea class="form-control" id="description" name="description" rows="2">{{ task.description }}</textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="priority" class="form-label">优先级</label>
+                                    <select class="form-select" id="priority" name="priority">
+                                        <option value="低" {% if task.priority == '低' %}selected{% endif %}>低</option>
+                                        <option value="普通" {% if task.priority == '普通' %}selected{% endif %}>普通</option>
+                                        <option value="高" {% if task.priority == '高' %}selected{% endif %}>高</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="status" class="form-label">状态</label>
+                                    <select class="form-select" id="status" name="status">
+                                        <option value="待处理" {% if task.status == '待处理' %}selected{% endif %}>待处理</option>
+                                        <option value="进行中" {% if task.status == '进行中' %}selected{% endif %}>进行中</option>
+                                        <option value="已完成" {% if task.status == '已完成' %}selected{% endif %}>已完成</option>
+                                        <option value="已取消" {% if task.status == '已取消' %}selected{% endif %}>已取消</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="assignee_id" class="form-label">分派给</label>
+                                    <select class="form-select" id="assignee_id" name="assignee_id">
+                                        <option value="">未分派</option>
+                                        {% for u in users %}
+                                        <option value="{{ u.id }}" {% if task.assignee_id == u.id %}selected{% endif %}>
+                                            {{ u.full_name or u.username }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="due_date" class="form-label">截止日期</label>
+                                    <input type="date" class="form-control" id="due_date" name="due_date"
+                                           value="{{ task.due_date|strftime if task.due_date else '' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="result" class="form-label">修复结果</label>
+                                    <textarea class="form-control" id="result" name="result" rows="2"
+                                              placeholder="任务完成时填写">{{ task.result }}</textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-save me-1"></i>保存更改
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

@@ -99,7 +99,7 @@
                 </div>
             </div>
             
-            <div class="card shadow-sm">
+            <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">
                         <i class="bi bi-archive me-2 text-secondary"></i>关联陶片列表
@@ -154,6 +154,54 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history me-2 text-secondary"></i>版本历史
+                        <span class="badge bg-primary ms-2">当前版本: v{{ group.current_version }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if versions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>版本</th>
+                                    <th>可信度</th>
+                                    <th>整理人</th>
+                                    <th>陶片数量</th>
+                                    <th>变更描述</th>
+                                    <th>创建时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for v in versions %}
+                                <tr {% if v.version_number == group.current_version %}class="table-primary"{% endif %}>
+                                    <td>
+                                        <strong>v{{ v.version_number }}</strong>
+                                        {% if v.version_number == group.current_version %}
+                                        <span class="badge bg-success ms-1">当前</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ v.confidence }}%</td>
+                                    <td>{{ v.organizer }}</td>
+                                    <td>{{ v.pottery_ids.split(',')|length }} 件</td>
+                                    <td class="small">{{ v.change_description or '-' }}</td>
+                                    <td class="small text-muted">{{ v.created_at|strftime_full }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <p class="mb-0">暂无版本历史记录</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </main>

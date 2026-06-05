@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}修复任务管理 - 陶片修复协同与审批管理系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-list-check text-primary me-2"></i>修复任务管理
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/tasks/add" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>新建任务
+                    </a>
+                </div>
+            </div>
+            
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="status_filter" class="form-label">任务状态</label>
+                            <select class="form-select" id="status_filter" name="status_filter">
+                                <option value="">全部</option>
+                                <option value="待处理" {% if status_filter == '待处理' %}selected{% endif %}>待处理</option>
+                                <option value="进行中" {% if status_filter == '进行中' %}selected{% endif %}>进行中</option>
+                                <option value="已完成" {% if status_filter == '已完成' %}selected{% endif %}>已完成</option>
+                                <option value="已取消" {% if status_filter == '已取消' %}selected{% endif %}>已取消</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="priority_filter" class="form-label">优先级</label>
+                            <select class="form-select" id="priority_filter" name="priority_filter">
+                                <option value="">全部</option>
+                                <option value="高" {% if priority_filter == '高' %}selected{% endif %}>高</option>
+                                <option value="普通" {% if priority_filter == '普通' %}selected{% endif %}>普通</option>
+                                <option value="低" {% if priority_filter == '低' %}selected{% endif %}>低</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="assignee_filter" class="form-label">分派给</label>
+                            <select class="form-select" id="assignee_filter" name="assignee_filter">
+                                <option value="">全部</option>
+                                {% for u in users %}
+                                <option value="{{ u.id }}" {% if assignee_filter == u.id %}selected{% endif %}>{{ u.full_name or u.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-primary me-2">
+                                <i class="bi bi-funnel me-1"></i>筛选
+                            </button>
+                            <a href="/tasks" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>重置
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    {% if tasks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>任务编号</th>
+                                    <th>陶片</th>
+                                    <th>任务标题</th>
+                                    <th>优先级</th>
+                                    <th>状态</th>
+                                    <th>分派给</th>
+                                    <th>截止日期</th>
+                                    <th>创建人</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                <tr>
+                                    <td><code>{{ task.task_number }}</code></td>
+                                    <td>{{ task.pottery.pottery_number }}</td>
+                                    <td>{{ task.title }}</td>
+                                    <td>
+                                        {% if task.priority == '高' %}
+                                        <span class="badge bg-danger">高</span>
+                                        {% elif task.priority == '普通' %}
+                                        <span class="badge bg-warning">普通</span>
+                                        {% else %}
+                                        <span class="badge bg-info">低</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.status == '待处理' %}
+                                        <span class="badge bg-secondary">待处理</span>
+                                        {% elif task.status == '进行中' %}
+                                        <span class="badge bg-primary">进行中</span>
+                                        {% elif task.status == '已完成' %}
+                                        <span class="badge bg-success">已完成</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-dark">已取消</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ task.assignee.full_name if task.assignee else '未分派' }}</td>
+                                    <td>{{ task.due_date|strftime if task.due_date else '-' }}</td>
+                                    <td>{{ task.creator.full_name if task.creator else '-' }}</td>
+                                    <td>
+                                        <a href="/tasks/{{ task.id }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                        <p class="mt-3">暂无任务记录</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

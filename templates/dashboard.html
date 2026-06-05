@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}数据概览 - 水下考古陶片拼合编目系统{% endblock %}
+{% block title %}数据概览 - 陶片修复协同与审批管理系统{% endblock %}
 
 {% block body %}
 <div class="container-fluid">
@@ -39,11 +39,12 @@
                         <div class="card-body">
                             <div class="d-flex align-items-start">
                                 <div class="flex-grow-1">
-                                    <p class="text-muted mb-1">已清洗</p>
-                                    <h3 class="mb-0">{{ total_cleaned }}</h3>
+                                    <p class="text-muted mb-1">修复任务</p>
+                                    <h3 class="mb-0">{{ total_tasks }}</h3>
+                                    <small class="text-warning"><i class="bi bi-exclamation-triangle"></i> 待处理: {{ pending_tasks }}</small>
                                 </div>
                                 <div class="avatar-sm bg-success bg-opacity-10 rounded">
-                                    <i class="bi bi-droplet text-success h4 mb-0 p-2"></i>
+                                    <i class="bi bi-list-check text-success h4 mb-0 p-2"></i>
                                 </div>
                             </div>
                         </div>
@@ -73,6 +74,7 @@
                                 <div class="flex-grow-1">
                                     <p class="text-muted mb-1">正式入库</p>
                                     <h3 class="mb-0">{{ total_stored }}</h3>
+                                    <small class="text-info"><i class="bi bi-clock"></i> 待审批: {{ pending_approvals }}</small>
                                 </div>
                                 <div class="avatar-sm bg-info bg-opacity-10 rounded">
                                     <i class="bi bi-box-seam text-info h4 mb-0 p-2"></i>
@@ -125,37 +127,41 @@
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title mb-4">
-                                <i class="bi bi-clock-history me-2 text-secondary"></i>最近添加的陶片
+                                <i class="bi bi-clock-history me-2 text-secondary"></i>最近操作日志
                             </h5>
                             <div class="table-responsive">
-                                <table class="table table-hover">
+                                <table class="table table-sm table-hover">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>陶片编号</th>
-                                            <th>出水区域</th>
-                                            <th>材质</th>
-                                            <th>残损等级</th>
-                                            <th>状态</th>
+                                            <th>时间</th>
+                                            <th>操作人</th>
+                                            <th>类型</th>
+                                            <th>描述</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for p in recent_potteries %}
-                                        <tr onclick="window.location='/potteries/{{ p.id }}'" style="cursor: pointer;">
-                                            <td><strong>{{ p.pottery_number }}</strong></td>
-                                            <td>{{ p.water_area }}</td>
-                                            <td>{{ p.material }}</td>
+                                        {% for log in recent_logs %}
+                                        <tr>
+                                            <td class="small text-muted">{{ log.created_at|strftime_full }}</td>
+                                            <td class="small">{{ log.user.full_name if log.user else '-' }}</td>
                                             <td>
-                                                {% if p.damage_level == '严重' %}
-                                                <span class="damage-severe">{{ p.damage_level }}</span>
+                                                {% if log.operation_type in ['创建', '上传', '审批通过'] %}
+                                                <span class="badge bg-success">{{ log.operation_type }}</span>
+                                                {% elif log.operation_type in ['更新', '分派'] %}
+                                                <span class="badge bg-primary">{{ log.operation_type }}</span>
+                                                {% elif log.operation_type in ['删除', '审批驳回'] %}
+                                                <span class="badge bg-danger">{{ log.operation_type }}</span>
+                                                {% elif log.operation_type == '提交审批' %}
+                                                <span class="badge bg-warning">{{ log.operation_type }}</span>
                                                 {% else %}
-                                                {{ p.damage_level }}
+                                                <span class="badge bg-secondary">{{ log.operation_type }}</span>
                                                 {% endif %}
                                             </td>
-                                            <td><span class="badge bg-secondary">{{ p.current_status }}</span></td>
+                                            <td class="small">{{ log.description }}</td>
                                         </tr>
                                         {% else %}
                                         <tr>
-                                            <td colspan="5" class="text-center text-muted py-3">暂无数据</td>
+                                            <td colspan="4" class="text-center text-muted py-3">暂无日志</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -166,9 +172,63 @@
                 </div>
             </div>
             
-            <div class="row">
-                <div class="col-12">
-                    <div class="card shadow-sm">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="bi bi-list-check me-2 text-secondary"></i>最近修复任务
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>任务编号</th>
+                                            <th>陶片</th>
+                                            <th>优先级</th>
+                                            <th>状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for t in recent_tasks %}
+                                        <tr onclick="window.location='/tasks/{{ t.id }}'" style="cursor: pointer;">
+                                            <td><code class="small">{{ t.task_number }}</code></td>
+                                            <td>{{ t.pottery.pottery_number }}</td>
+                                            <td>
+                                                {% if t.priority == '高' %}
+                                                <span class="badge bg-danger">高</span>
+                                                {% elif t.priority == '普通' %}
+                                                <span class="badge bg-warning">普通</span>
+                                                {% else %}
+                                                <span class="badge bg-info">低</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if t.status == '待处理' %}
+                                                <span class="badge bg-secondary">待处理</span>
+                                                {% elif t.status == '进行中' %}
+                                                <span class="badge bg-primary">进行中</span>
+                                                {% elif t.status == '已完成' %}
+                                                <span class="badge bg-success">已完成</span>
+                                                {% else %}
+                                                <span class="badge bg-light text-dark">已取消</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">暂无任务</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card shadow-sm h-100">
                         <div class="card-body">
                             <h5 class="card-title mb-4">
                                 <i class="bi bi-collection me-2 text-secondary"></i>最近的拼合分组
@@ -178,8 +238,7 @@
                                     <thead class="table-light">
                                         <tr>
                                             <th>组号</th>
-                                            <th>拼合可信度</th>
-                                            <th>整理人</th>
+                                            <th>可信度</th>
                                             <th>陶片数量</th>
                                             <th>状态</th>
                                         </tr>
@@ -190,13 +249,12 @@
                                             <td><strong>{{ g.group_number }}</strong></td>
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    <div class="progress me-2" style="width: 100px; height: 8px;">
+                                                    <div class="progress me-2" style="width: 60px; height: 6px;">
                                                         <div class="progress-bar {% if g.confidence >= 80 %}bg-success{% elif g.confidence >= 50 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ g.confidence }}%"></div>
                                                     </div>
-                                                    <span>{{ g.confidence }}%</span>
+                                                    <small>{{ g.confidence }}%</small>
                                                 </div>
                                             </td>
-                                            <td>{{ g.organizer }}</td>
                                             <td><span class="badge bg-primary">{{ g.members|length }} 件</span></td>
                                             <td>
                                                 {% if g.is_completed %}
@@ -208,7 +266,7 @@
                                         </tr>
                                         {% else %}
                                         <tr>
-                                            <td colspan="5" class="text-center text-muted py-3">暂无数据</td>
+                                            <td colspan="4" class="text-center text-muted py-3">暂无数据</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
