@@ -2007,15 +2007,36 @@ async def edit_repair_plan(
 @app.post("/repair_plans/{plan_id}/submit")
 async def submit_repair_plan(
     plan_id: int,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     plan = db.query(RepairPlan).filter(RepairPlan.id == plan_id).first()
-    if plan:
-        plan.status = RepairPlanStatus.IN_REVIEW
-        plan.submitted_at = datetime.now()
-        db.commit()
-        log_operation(db, current_user, OperationType.SUBMIT, "repair_plan", plan_id, f"提交修复方案复核: {plan.plan_name}")
+    if not plan:
+        return RedirectResponse(url="/repair_plans", status_code=status.HTTP_303_SEE_OTHER)
+
+    if plan.status not in [RepairPlanStatus.DRAFT, RepairPlanStatus.REJECTED]:
+        users = db.query(User).all()
+        review_records = db.query(ReviewRecord).filter(ReviewRecord.repair_plan_id == plan_id).order_by(ReviewRecord.created_at.desc()).all()
+        comparison_images = db.query(RepairComparisonImage).filter(RepairComparisonImage.repair_plan_id == plan_id).order_by(RepairComparisonImage.created_at.asc()).all()
+        
+        return templates.TemplateResponse("repair_plan_detail.html", {
+            "request": request,
+            "current_user": current_user,
+            "plan": plan,
+            "users": users,
+            "review_records": review_records,
+            "comparison_images": comparison_images,
+            "statuses": [e.value for e in RepairPlanStatus],
+            "progresses": [e.value for e in RepairProgress],
+            "today": date.today().isoformat(),
+            "error": "仅草稿或已驳回的方案可以提交复核"
+        })
+
+    plan.status = RepairPlanStatus.IN_REVIEW
+    plan.submitted_at = datetime.now()
+    db.commit()
+    log_operation(db, current_user, OperationType.SUBMIT, "repair_plan", plan_id, f"提交修复方案复核: {plan.plan_name}")
 
     return RedirectResponse(url=f"/repair_plans/{plan_id}", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -2027,22 +2048,52 @@ async def update_repair_progress(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     progress: str = Form(...),
-    status: Optional[str] = Form(None)
+    plan_status: Optional[str] = Form(None)
 ):
     plan = db.query(RepairPlan).filter(RepairPlan.id == plan_id).first()
-    if plan:
-        old_progress = plan.progress
-        plan.progress = progress
+    if not plan:
+        return RedirectResponse(url="/repair_plans", status_code=status.HTTP_303_SEE_OTHER)
 
-        if status:
-            plan.status = status
+    if plan.status not in [RepairPlanStatus.APPROVED, RepairPlanStatus.IN_REPAIR]:
+        return templates.TemplateResponse("repair_plan_detail.html", {
+            "request": request,
+            "current_user": current_user,
+            "plan": plan,
+            "users": [],
+            "review_records": [],
+            "comparison_images": [],
+            "statuses": [e.value for e in RepairPlanStatus],
+            "progresses": [e.value for e in RepairProgress],
+            "today": date.today().isoformat(),
+            "error": "仅已通过或修复中的方案可以更新进度"
+        })
 
-        if progress == RepairProgress.COMPLETED and plan.status != RepairPlanStatus.COMPLETED:
-            plan.status = RepairPlanStatus.COMPLETED
-            plan.completed_at = datetime.now()
+    if progress == RepairProgress.COMPLETED and plan.status != RepairPlanStatus.APPROVED and plan.status != RepairPlanStatus.IN_REPAIR:
+        return templates.TemplateResponse("repair_plan_detail.html", {
+            "request": request,
+            "current_user": current_user,
+            "plan": plan,
+            "users": [],
+            "review_records": [],
+            "comparison_images": [],
+            "statuses": [e.value for e in RepairPlanStatus],
+            "progresses": [e.value for e in RepairProgress],
+            "today": date.today().isoformat(),
+            "error": "方案未通过复核，无法标记为已完成"
+        })
 
-        db.commit()
-        log_operation(db, current_user, OperationType.UPDATE, "repair_plan", plan_id, f"更新修复进度: {old_progress} -> {progress}")
+    old_progress = plan.progress
+    plan.progress = progress
+
+    if plan_status and plan_status in [RepairPlanStatus.IN_REPAIR, RepairPlanStatus.APPROVED]:
+        plan.status = plan_status
+
+    if progress == RepairProgress.COMPLETED and plan.status != RepairPlanStatus.COMPLETED:
+        plan.status = RepairPlanStatus.COMPLETED
+        plan.completed_at = datetime.now()
+
+    db.commit()
+    log_operation(db, current_user, OperationType.UPDATE, "repair_plan", plan_id, f"更新修复进度: {old_progress} -> {progress}")
 
     return RedirectResponse(url=f"/repair_plans/{plan_id}", status_code=status.HTTP_303_SEE_OTHER)
 

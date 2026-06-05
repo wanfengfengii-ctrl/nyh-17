@@ -21,12 +21,12 @@
                     </h1>
                 </div>
                 <div class="btn-toolbar mb-2 mb-md-0">
-                    {% if plan.status not in ['已通过', '已完成'] %}
+                    {% if plan.status in ['草稿', '已驳回'] %}
                     <a href="/repair_plans/{{ plan.id }}/edit" class="btn btn-outline-secondary me-2">
                         <i class="bi bi-pencil me-1"></i>编辑
                     </a>
                     {% endif %}
-                    {% if plan.status == '草稿' %}
+                    {% if plan.status in ['草稿', '已驳回'] %}
                     <form method="post" action="/repair_plans/{{ plan.id }}/submit" class="d-inline">
                         <button type="submit" class="btn btn-primary" onclick="return confirm('确定提交该方案进行复核吗？')">
                             <i class="bi bi-send me-1"></i>提交复核
@@ -142,7 +142,7 @@
                                         <span class="badge bg-secondary">{{ plan.progress }}</span>
                                     </div>
                                 </div>
-                                {% if plan.status not in ['已完成'] %}
+                                {% if plan.status in ['已通过', '修复中'] %}
                                 <div class="mb-3">
                                     <label class="form-label small">更新进度</label>
                                     <select class="form-select form-select-sm" name="progress" required>
@@ -153,16 +153,23 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label small">更新状态（可选）</label>
-                                    <select class="form-select form-select-sm" name="status">
+                                    <select class="form-select form-select-sm" name="plan_status">
                                         <option value="">不改变</option>
-                                        {% for s in statuses %}
-                                        <option value="{{ s }}" {% if plan.status == s %}selected{% endif %}>{{ s }}</option>
-                                        {% endfor %}
+                                        <option value="修复中" {% if plan.status == '修复中' %}selected{% endif %}>修复中</option>
                                     </select>
                                 </div>
                                 <button type="submit" class="btn btn-sm btn-primary w-100">
                                     <i class="bi bi-arrow-repeat me-1"></i>更新进度
                                 </button>
+                                {% else %}
+                                <div class="alert alert-info small mb-0">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    {% if plan.status == '已完成' %}
+                                    方案已完成，无法更新进度
+                                    {% else %}
+                                    进度更新需在方案通过复核后进行
+                                    {% endif %}
+                                </div>
                                 {% endif %}
                             </form>
                         </div>
