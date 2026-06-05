@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}专家复核 - 陶片修复协同与审批管理系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-journal-check text-primary me-2"></i>专家复核
+                </h1>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" id="reviewTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                                待复核 <span class="badge bg-warning ms-1">{{ plans|length }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="reviewTabsContent">
+                        <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>方案编号</th>
+                                            <th>方案名称</th>
+                                            <th>陶片</th>
+                                            <th>修复责任人</th>
+                                            <th>提交时间</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for plan in plans %}
+                                        <tr>
+                                            <td><code class="small">{{ plan.plan_number }}</code></td>
+                                            <td><strong>{{ plan.plan_name }}</strong></td>
+                                            <td>{{ plan.pottery.pottery_number }}</td>
+                                            <td>{{ plan.restorer_name or (plan.restorer.full_name if plan.restorer else '-') }}</td>
+                                            <td class="small text-muted">{{ plan.submitted_at|strftime_full if plan.submitted_at else '-' }}</td>
+                                            <td>
+                                                <a href="/reviews/{{ plan.id }}" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-check2-square me-1"></i>复核
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted py-4">
+                                                <i class="bi bi-check-circle display-4 d-block mb-2 text-success"></i>
+                                                暂无待复核的方案
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

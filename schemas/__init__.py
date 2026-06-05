@@ -10,5 +10,8 @@ from schemas.schemas import (
     StorageRecord, StorageRecordCreate, StorageRecordUpdate,
     StorageApproval, StorageApprovalCreate,
     OperationLog, OperationLogCreate,
-    UnderwaterImage, UnderwaterImageCreate, UnderwaterImageUpdate
+    UnderwaterImage, UnderwaterImageCreate, UnderwaterImageUpdate,
+    RepairPlan, RepairPlanCreate, RepairPlanUpdate,
+    ReviewRecord, ReviewRecordCreate, ReviewRecordUpdate,
+    RepairComparisonImage, RepairComparisonImageCreate
 )

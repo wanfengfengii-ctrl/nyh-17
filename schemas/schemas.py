@@ -354,3 +354,118 @@ class UnderwaterImage(UnderwaterImageBase):
 
     class Config:
         from_attributes = True
+
+
+class RepairComparisonImageBase(BaseModel):
+    repair_plan_id: int
+    image_type: str
+    image_stage: str
+    description: Optional[str] = None
+
+
+class RepairComparisonImageCreate(RepairComparisonImageBase):
+    image_path: str
+    uploaded_by: int
+
+
+class RepairComparisonImage(RepairComparisonImageBase):
+    id: int
+    image_path: str
+    uploaded_by: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ReviewRecordBase(BaseModel):
+    repair_plan_id: int
+    review_opinion: Optional[str] = None
+    review_conclusion: Optional[str] = None
+    review_date: Optional[date] = None
+    is_returned: bool = False
+    return_reason: Optional[str] = None
+
+
+class ReviewRecordCreate(ReviewRecordBase):
+    reviewer_id: int
+    reviewer_name: Optional[str] = None
+
+
+class ReviewRecordUpdate(BaseModel):
+    review_opinion: Optional[str] = None
+    review_conclusion: Optional[str] = None
+    review_date: Optional[date] = None
+    is_returned: Optional[bool] = None
+    return_reason: Optional[str] = None
+
+
+class ReviewRecord(ReviewRecordBase):
+    id: int
+    reviewer_id: Optional[int] = None
+    reviewer_name: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class RepairPlanBase(BaseModel):
+    pottery_id: int
+    group_id: Optional[int] = None
+    task_id: Optional[int] = None
+    plan_name: str
+    plan_description: Optional[str] = None
+    repair_method: Optional[str] = None
+    materials_used: Optional[str] = None
+    estimated_duration: Optional[int] = None
+    expected_completion_date: Optional[date] = None
+    restorer_id: Optional[int] = None
+    restorer_name: Optional[str] = None
+
+    @validator('expected_completion_date')
+    def expected_completion_date_not_past(cls, v):
+        if v and v < date.today():
+            raise ValueError('预计完成日期不能早于当前日期')
+        return v
+
+
+class RepairPlanCreate(RepairPlanBase):
+    pass
+
+
+class RepairPlanUpdate(BaseModel):
+    plan_name: Optional[str] = None
+    plan_description: Optional[str] = None
+    repair_method: Optional[str] = None
+    materials_used: Optional[str] = None
+    estimated_duration: Optional[int] = None
+    expected_completion_date: Optional[date] = None
+    status: Optional[str] = None
+    progress: Optional[str] = None
+    restorer_id: Optional[int] = None
+    restorer_name: Optional[str] = None
+
+    @validator('expected_completion_date')
+    def expected_completion_date_not_past(cls, v):
+        if v and v < date.today():
+            raise ValueError('预计完成日期不能早于当前日期')
+        return v
+
+
+class RepairPlan(RepairPlanBase):
+    id: int
+    plan_number: str
+    status: str
+    progress: str
+    created_by: int
+    submitted_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    review_records: List[ReviewRecord] = []
+    comparison_images: List[RepairComparisonImage] = []
+
+    class Config:
+        from_attributes = True

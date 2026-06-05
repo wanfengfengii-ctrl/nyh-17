@@ -21,12 +21,14 @@ from database import engine, Base, get_db
 from models import (
     User, Pottery, CleaningRecord, PotteryGroup, PotteryGroupMember, StorageRecord,
     PotteryImage, RepairTask, GroupVersion, StorageApproval, OperationLog,
-    TaskStatus, ApprovalStatus, OperationType, UnderwaterImage
+    TaskStatus, ApprovalStatus, OperationType, UnderwaterImage,
+    RepairPlan, ReviewRecord, RepairComparisonImage, RepairPlanStatus, RepairProgress
 )
 from schemas import (
     PotteryCreate, PotteryUpdate, CleaningRecordCreate, PotteryGroupCreate, PotteryGroupUpdate,
     StorageRecordCreate, RepairTaskCreate, RepairTaskUpdate, StorageRecordUpdate,
-    UnderwaterImageCreate, UnderwaterImageUpdate
+    UnderwaterImageCreate, UnderwaterImageUpdate,
+    RepairPlanCreate, RepairPlanUpdate, ReviewRecordCreate, ReviewRecordUpdate
 )
 from auth import get_password_hash, authenticate_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
 
@@ -131,6 +133,11 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
     pending_tasks = db.query(RepairTask).filter(RepairTask.status == TaskStatus.PENDING).count()
     pending_approvals = db.query(StorageRecord).filter(StorageRecord.approval_status == ApprovalStatus.SUBMITTED).count()
     
+    total_repair_plans = db.query(RepairPlan).count()
+    pending_reviews = db.query(RepairPlan).filter(RepairPlan.status == RepairPlanStatus.IN_REVIEW).count()
+    in_repair_plans = db.query(RepairPlan).filter(RepairPlan.status == RepairPlanStatus.IN_REPAIR).count()
+    completed_repair_plans = db.query(RepairPlan).filter(RepairPlan.status == RepairPlanStatus.COMPLETED).count()
+    
     total_underwater_images = db.query(UnderwaterImage).count()
     total_3d_models = db.query(UnderwaterImage).filter(UnderwaterImage.file_type == "3d").count()
     total_photos = db.query(UnderwaterImage).filter(UnderwaterImage.file_type == "image").count()
@@ -150,6 +157,7 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
     recent_potteries = db.query(Pottery).order_by(Pottery.created_at.desc()).limit(5).all()
     recent_groups = db.query(PotteryGroup).order_by(PotteryGroup.created_at.desc()).limit(5).all()
     recent_tasks = db.query(RepairTask).order_by(RepairTask.created_at.desc()).limit(5).all()
+    recent_repair_plans = db.query(RepairPlan).order_by(RepairPlan.created_at.desc()).limit(5).all()
     recent_logs = db.query(OperationLog).order_by(OperationLog.created_at.desc()).limit(10).all()
     recent_underwater_images = db.query(UnderwaterImage).order_by(UnderwaterImage.created_at.desc()).limit(5).all()
 
@@ -157,6 +165,13 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
         "轻微": db.query(Pottery).filter(Pottery.damage_level == "轻微").count(),
         "中度": db.query(Pottery).filter(Pottery.damage_level == "中度").count(),
         "严重": db.query(Pottery).filter(Pottery.damage_level == "严重").count()
+    }
+
+    repair_plan_stats = {
+        "total": total_repair_plans,
+        "pending_reviews": pending_reviews,
+        "in_repair": in_repair_plans,
+        "completed": completed_repair_plans
     }
 
     return templates.TemplateResponse("dashboard.html", {
@@ -172,10 +187,12 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
         "recent_potteries": recent_potteries,
         "recent_groups": recent_groups,
         "recent_tasks": recent_tasks,
+        "recent_repair_plans": recent_repair_plans,
         "recent_logs": recent_logs,
         "recent_underwater_images": recent_underwater_images,
         "damage_stats": damage_stats,
         "underwater_image_stats": underwater_image_stats,
+        "repair_plan_stats": repair_plan_stats,
         "today": date.today().isoformat()
     })
 
@@ -385,6 +402,8 @@ async def pottery_detail(
 
     repair_tasks = db.query(RepairTask).filter(RepairTask.pottery_id == pottery_id).order_by(RepairTask.created_at.desc()).all()
 
+    repair_plans = db.query(RepairPlan).filter(RepairPlan.pottery_id == pottery_id).order_by(RepairPlan.created_at.desc()).all()
+
     return templates.TemplateResponse("pottery_detail.html", {
         "request": request,
         "current_user": current_user,
@@ -392,7 +411,8 @@ async def pottery_detail(
         "cleaning_records": cleaning_records,
         "groups": groups,
         "storage_record": storage_record,
-        "repair_tasks": repair_tasks
+        "repair_tasks": repair_tasks,
+        "repair_plans": repair_plans
     })
 
 
@@ -1664,6 +1684,532 @@ async def delete_underwater_image(
         log_operation(db, current_user, OperationType.DELETE, "underwater_image", image_id, f"删除水下影像: {image.image_number}")
     
     return RedirectResponse(url="/underwater_images", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/repair_plans", response_class=HTMLResponse)
+async def list_repair_plans(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    status_filter: Optional[str] = None,
+    progress_filter: Optional[str] = None,
+    restorer_filter: Optional[int] = None,
+    pottery_id: Optional[int] = None
+):
+    query = db.query(RepairPlan)
+
+    if status_filter:
+        query = query.filter(RepairPlan.status == status_filter)
+    if progress_filter:
+        query = query.filter(RepairPlan.progress == progress_filter)
+    if restorer_filter:
+        query = query.filter(RepairPlan.restorer_id == restorer_filter)
+    if pottery_id:
+        query = query.filter(RepairPlan.pottery_id == pottery_id)
+
+    plans = query.order_by(RepairPlan.created_at.desc()).all()
+    users = db.query(User).all()
+    potteries = db.query(Pottery).all()
+
+    return templates.TemplateResponse("repair_plans.html", {
+        "request": request,
+        "current_user": current_user,
+        "plans": plans,
+        "users": users,
+        "potteries": potteries,
+        "status_filter": status_filter,
+        "progress_filter": progress_filter,
+        "restorer_filter": restorer_filter,
+        "pottery_id": pottery_id
+    })
+
+
+@app.get("/repair_plans/add", response_class=HTMLResponse)
+async def add_repair_plan_page(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    pottery_id: Optional[int] = None,
+    task_id: Optional[int] = None,
+    group_id: Optional[int] = None
+):
+    available_potteries = db.query(Pottery).filter(Pottery.is_locked == False).all()
+    users = db.query(User).all()
+    tasks = db.query(RepairTask).filter(RepairTask.status != TaskStatus.COMPLETED).all()
+    groups = db.query(PotteryGroup).filter(PotteryGroup.is_completed == False).all()
+
+    selected_pottery = None
+    selected_task = None
+    selected_group = None
+
+    if pottery_id:
+        selected_pottery = db.query(Pottery).filter(Pottery.id == pottery_id).first()
+    if task_id:
+        selected_task = db.query(RepairTask).filter(RepairTask.id == task_id).first()
+    if group_id:
+        selected_group = db.query(PotteryGroup).filter(PotteryGroup.id == group_id).first()
+
+    return templates.TemplateResponse("repair_plan_form.html", {
+        "request": request,
+        "current_user": current_user,
+        "plan": None,
+        "potteries": available_potteries,
+        "users": users,
+        "tasks": tasks,
+        "groups": groups,
+        "selected_pottery": selected_pottery,
+        "selected_task": selected_task,
+        "selected_group": selected_group,
+        "today": date.today().isoformat(),
+        "statuses": [e.value for e in RepairPlanStatus],
+        "progresses": [e.value for e in RepairProgress]
+    })
+
+
+@app.post("/repair_plans/add")
+async def add_repair_plan(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    pottery_id: int = Form(...),
+    group_id: Optional[int] = Form(None),
+    task_id: Optional[int] = Form(None),
+    plan_name: str = Form(...),
+    plan_description: str = Form(""),
+    repair_method: str = Form(""),
+    materials_used: str = Form(""),
+    estimated_duration: Optional[int] = Form(None),
+    expected_completion_date: Optional[date] = Form(None),
+    restorer_id: Optional[int] = Form(None),
+    restorer_name: str = Form("")
+):
+    pottery = db.query(Pottery).filter(Pottery.id == pottery_id).first()
+    if not pottery:
+        return RedirectResponse(url="/repair_plans", status_code=status.HTTP_303_SEE_OTHER)
+
+    if pottery.is_locked:
+        available_potteries = db.query(Pottery).filter(Pottery.is_locked == False).all()
+        users = db.query(User).all()
+        tasks = db.query(RepairTask).filter(RepairTask.status != TaskStatus.COMPLETED).all()
+        groups = db.query(PotteryGroup).filter(PotteryGroup.is_completed == False).all()
+        return templates.TemplateResponse("repair_plan_form.html", {
+            "request": request,
+            "current_user": current_user,
+            "plan": None,
+            "potteries": available_potteries,
+            "users": users,
+            "tasks": tasks,
+            "groups": groups,
+            "selected_pottery": None,
+            "selected_task": None,
+            "selected_group": None,
+            "today": date.today().isoformat(),
+            "statuses": [e.value for e in RepairPlanStatus],
+            "progresses": [e.value for e in RepairProgress],
+            "error": "该陶片已锁定，无法创建修复方案"
+        })
+
+    if expected_completion_date and expected_completion_date < date.today():
+        available_potteries = db.query(Pottery).filter(Pottery.is_locked == False).all()
+        users = db.query(User).all()
+        tasks = db.query(RepairTask).filter(RepairTask.status != TaskStatus.COMPLETED).all()
+        groups = db.query(PotteryGroup).filter(PotteryGroup.is_completed == False).all()
+        return templates.TemplateResponse("repair_plan_form.html", {
+            "request": request,
+            "current_user": current_user,
+            "plan": None,
+            "potteries": available_potteries,
+            "users": users,
+            "tasks": tasks,
+            "groups": groups,
+            "selected_pottery": pottery,
+            "selected_task": None,
+            "selected_group": None,
+            "today": date.today().isoformat(),
+            "statuses": [e.value for e in RepairPlanStatus],
+            "progresses": [e.value for e in RepairProgress],
+            "error": "预计完成日期不能早于当前日期"
+        })
+
+    plan_number = f"PLAN{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+    plan = RepairPlan(
+        plan_number=plan_number,
+        pottery_id=pottery_id,
+        group_id=group_id,
+        task_id=task_id,
+        plan_name=plan_name,
+        plan_description=plan_description,
+        repair_method=repair_method,
+        materials_used=materials_used,
+        estimated_duration=estimated_duration,
+        expected_completion_date=expected_completion_date,
+        status=RepairPlanStatus.DRAFT,
+        progress=RepairProgress.NOT_STARTED,
+        restorer_id=restorer_id,
+        restorer_name=restorer_name,
+        created_by=current_user.id
+    )
+    db.add(plan)
+    db.commit()
+    db.refresh(plan)
+
+    log_operation(db, current_user, OperationType.CREATE, "repair_plan", plan.id, f"创建修复方案: {plan_name}")
+
+    return RedirectResponse(url="/repair_plans", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/repair_plans/{plan_id}", response_class=HTMLResponse)
+async def repair_plan_detail(
+    plan_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    plan = db.query(RepairPlan).filter(RepairPlan.id == plan_id).first()
+    if not plan:
+        return RedirectResponse(url="/repair_plans", status_code=status.HTTP_303_SEE_OTHER)
+
+    users = db.query(User).all()
+    review_records = db.query(ReviewRecord).filter(ReviewRecord.repair_plan_id == plan_id).order_by(ReviewRecord.created_at.desc()).all()
+    comparison_images = db.query(RepairComparisonImage).filter(RepairComparisonImage.repair_plan_id == plan_id).order_by(RepairComparisonImage.created_at.asc()).all()
+
+    return templates.TemplateResponse("repair_plan_detail.html", {
+        "request": request,
+        "current_user": current_user,
+        "plan": plan,
+        "users": users,
+        "review_records": review_records,
+        "comparison_images": comparison_images,
+        "statuses": [e.value for e in RepairPlanStatus],
+        "progresses": [e.value for e in RepairProgress],
+        "today": date.today().isoformat()
+    })
+
+
+@app.get("/repair_plans/{plan_id}/edit", response_class=HTMLResponse)
+async def edit_repair_plan_page(
+    plan_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    plan = db.query(RepairPlan).filter(RepairPlan.id == plan_id).first()
+    if not plan:
+        return RedirectResponse(url="/repair_plans", status_code=status.HTTP_303_SEE_OTHER)
+
+    if plan.status in [RepairPlanStatus.APPROVED, RepairPlanStatus.COMPLETED]:
+        return templates.TemplateResponse("repair_plan_detail.html", {
+            "request": request,
+            "current_user": current_user,
+            "plan": plan,
+            "users": [],
+            "review_records": [],
+            "comparison_images": [],
+            "statuses": [e.value for e in RepairPlanStatus],
+            "progresses": [e.value for e in RepairProgress],
+            "today": date.today().isoformat(),
+            "error": "该方案已通过或已完成，无法修改"
+        })
+
+    available_potteries = db.query(Pottery).filter(Pottery.is_locked == False).all()
+    users = db.query(User).all()
+    tasks = db.query(RepairTask).filter(RepairTask.status != TaskStatus.COMPLETED).all()
+    groups = db.query(PotteryGroup).filter(PotteryGroup.is_completed == False).all()
+
+    return templates.TemplateResponse("repair_plan_form.html", {
+        "request": request,
+        "current_user": current_user,
+        "plan": plan,
+        "potteries": available_potteries,
+        "users": users,
+        "tasks": tasks,
+        "groups": groups,
+        "selected_pottery": None,
+        "selected_task": None,
+        "selected_group": None,
+        "today": date.today().isoformat(),
+        "statuses": [e.value for e in RepairPlanStatus],
+        "progresses": [e.value for e in RepairProgress]
+    })
+
+
+@app.post("/repair_plans/{plan_id}/edit")
+async def edit_repair_plan(
+    plan_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    plan_name: str = Form(...),
+    plan_description: str = Form(""),
+    repair_method: str = Form(""),
+    materials_used: str = Form(""),
+    estimated_duration: Optional[int] = Form(None),
+    expected_completion_date: Optional[date] = Form(None),
+    restorer_id: Optional[int] = Form(None),
+    restorer_name: str = Form("")
+):
+    plan = db.query(RepairPlan).filter(RepairPlan.id == plan_id).first()
+    if not plan:
+        return RedirectResponse(url="/repair_plans", status_code=status.HTTP_303_SEE_OTHER)
+
+    if plan.status in [RepairPlanStatus.APPROVED, RepairPlanStatus.COMPLETED]:
+        return templates.TemplateResponse("repair_plan_detail.html", {
+            "request": request,
+            "current_user": current_user,
+            "plan": plan,
+            "users": [],
+            "review_records": [],
+            "comparison_images": [],
+            "statuses": [e.value for e in RepairPlanStatus],
+            "progresses": [e.value for e in RepairProgress],
+            "today": date.today().isoformat(),
+            "error": "该方案已通过或已完成，无法修改"
+        })
+
+    if expected_completion_date and expected_completion_date < date.today():
+        available_potteries = db.query(Pottery).filter(Pottery.is_locked == False).all()
+        users = db.query(User).all()
+        tasks = db.query(RepairTask).filter(RepairTask.status != TaskStatus.COMPLETED).all()
+        groups = db.query(PotteryGroup).filter(PotteryGroup.is_completed == False).all()
+        return templates.TemplateResponse("repair_plan_form.html", {
+            "request": request,
+            "current_user": current_user,
+            "plan": plan,
+            "potteries": available_potteries,
+            "users": users,
+            "tasks": tasks,
+            "groups": groups,
+            "selected_pottery": None,
+            "selected_task": None,
+            "selected_group": None,
+            "today": date.today().isoformat(),
+            "statuses": [e.value for e in RepairPlanStatus],
+            "progresses": [e.value for e in RepairProgress],
+            "error": "预计完成日期不能早于当前日期"
+        })
+
+    plan.plan_name = plan_name
+    plan.plan_description = plan_description
+    plan.repair_method = repair_method
+    plan.materials_used = materials_used
+    plan.estimated_duration = estimated_duration
+    plan.expected_completion_date = expected_completion_date
+    plan.restorer_id = restorer_id
+    plan.restorer_name = restorer_name
+
+    db.commit()
+    log_operation(db, current_user, OperationType.UPDATE, "repair_plan", plan_id, f"更新修复方案: {plan_name}")
+
+    return RedirectResponse(url=f"/repair_plans/{plan_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/repair_plans/{plan_id}/submit")
+async def submit_repair_plan(
+    plan_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    plan = db.query(RepairPlan).filter(RepairPlan.id == plan_id).first()
+    if plan:
+        plan.status = RepairPlanStatus.IN_REVIEW
+        plan.submitted_at = datetime.now()
+        db.commit()
+        log_operation(db, current_user, OperationType.SUBMIT, "repair_plan", plan_id, f"提交修复方案复核: {plan.plan_name}")
+
+    return RedirectResponse(url=f"/repair_plans/{plan_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/repair_plans/{plan_id}/progress")
+async def update_repair_progress(
+    plan_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    progress: str = Form(...),
+    status: Optional[str] = Form(None)
+):
+    plan = db.query(RepairPlan).filter(RepairPlan.id == plan_id).first()
+    if plan:
+        old_progress = plan.progress
+        plan.progress = progress
+
+        if status:
+            plan.status = status
+
+        if progress == RepairProgress.COMPLETED and plan.status != RepairPlanStatus.COMPLETED:
+            plan.status = RepairPlanStatus.COMPLETED
+            plan.completed_at = datetime.now()
+
+        db.commit()
+        log_operation(db, current_user, OperationType.UPDATE, "repair_plan", plan_id, f"更新修复进度: {old_progress} -> {progress}")
+
+    return RedirectResponse(url=f"/repair_plans/{plan_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/repair_plans/{plan_id}/images/upload")
+async def upload_comparison_image(
+    plan_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    image: UploadFile = File(...),
+    image_type: str = Form(...),
+    image_stage: str = Form(...),
+    description: str = Form("")
+):
+    plan = db.query(RepairPlan).filter(RepairPlan.id == plan_id).first()
+    if not plan:
+        return RedirectResponse(url="/repair_plans", status_code=status.HTTP_303_SEE_OTHER)
+
+    file_ext = os.path.splitext(image.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+
+    with open(file_path, "wb") as buffer:
+        content = await image.read()
+        buffer.write(content)
+
+    comparison_image = RepairComparisonImage(
+        repair_plan_id=plan_id,
+        image_path=f"/{file_path}",
+        image_type=image_type,
+        image_stage=image_stage,
+        description=description,
+        uploaded_by=current_user.id
+    )
+    db.add(comparison_image)
+    db.commit()
+
+    log_operation(db, current_user, OperationType.UPLOAD, "repair_comparison_image", comparison_image.id, f"上传修复对比图像: {plan.plan_name}")
+
+    return RedirectResponse(url=f"/repair_plans/{plan_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/repair_plans/{plan_id}/images/{image_id}/delete")
+async def delete_comparison_image(
+    plan_id: int,
+    image_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    image = db.query(RepairComparisonImage).filter(
+        RepairComparisonImage.id == image_id,
+        RepairComparisonImage.repair_plan_id == plan_id
+    ).first()
+    if image:
+        if os.path.exists(image.image_path.lstrip("/")):
+            os.remove(image.image_path.lstrip("/"))
+        db.delete(image)
+        db.commit()
+        log_operation(db, current_user, OperationType.DELETE, "repair_comparison_image", image_id, f"删除修复对比图像")
+
+    return RedirectResponse(url=f"/repair_plans/{plan_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/reviews", response_class=HTMLResponse)
+async def list_reviews(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    status_filter: Optional[str] = None
+):
+    query = db.query(RepairPlan).filter(RepairPlan.status == RepairPlanStatus.IN_REVIEW)
+
+    if status_filter:
+        query = query.filter(RepairPlan.status == status_filter)
+
+    plans = query.order_by(RepairPlan.submitted_at.desc()).all()
+
+    return templates.TemplateResponse("reviews.html", {
+        "request": request,
+        "current_user": current_user,
+        "plans": plans,
+        "status_filter": status_filter
+    })
+
+
+@app.get("/reviews/{plan_id}", response_class=HTMLResponse)
+async def review_page(
+    plan_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    plan = db.query(RepairPlan).filter(RepairPlan.id == plan_id).first()
+    if not plan:
+        return RedirectResponse(url="/reviews", status_code=status.HTTP_303_SEE_OTHER)
+
+    review_records = db.query(ReviewRecord).filter(ReviewRecord.repair_plan_id == plan_id).order_by(ReviewRecord.created_at.desc()).all()
+    comparison_images = db.query(RepairComparisonImage).filter(RepairComparisonImage.repair_plan_id == plan_id).order_by(RepairComparisonImage.created_at.asc()).all()
+
+    return templates.TemplateResponse("review_form.html", {
+        "request": request,
+        "current_user": current_user,
+        "plan": plan,
+        "review_records": review_records,
+        "comparison_images": comparison_images,
+        "today": date.today().isoformat()
+    })
+
+
+@app.post("/reviews/{plan_id}/submit")
+async def submit_review(
+    plan_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    review_opinion: str = Form(""),
+    review_conclusion: str = Form(...),
+    review_date: date = Form(...),
+    is_returned: Optional[str] = Form("false"),
+    return_reason: str = Form("")
+):
+    plan = db.query(RepairPlan).filter(RepairPlan.id == plan_id).first()
+    if not plan:
+        return RedirectResponse(url="/reviews", status_code=status.HTTP_303_SEE_OTHER)
+
+    if review_date > date.today():
+        review_records = db.query(ReviewRecord).filter(ReviewRecord.repair_plan_id == plan_id).order_by(ReviewRecord.created_at.desc()).all()
+        comparison_images = db.query(RepairComparisonImage).filter(RepairComparisonImage.repair_plan_id == plan_id).order_by(RepairComparisonImage.created_at.asc()).all()
+        return templates.TemplateResponse("review_form.html", {
+            "request": request,
+            "current_user": current_user,
+            "plan": plan,
+            "review_records": review_records,
+            "comparison_images": comparison_images,
+            "today": date.today().isoformat(),
+            "error": "复核日期不能晚于当前日期"
+        })
+
+    returned = is_returned == "true"
+
+    review = ReviewRecord(
+        repair_plan_id=plan_id,
+        reviewer_id=current_user.id,
+        reviewer_name=current_user.full_name,
+        review_opinion=review_opinion,
+        review_conclusion=review_conclusion,
+        review_date=review_date,
+        is_returned=returned,
+        return_reason=return_reason if returned else None
+    )
+    db.add(review)
+
+    if returned:
+        plan.status = RepairPlanStatus.REJECTED
+        log_msg = f"复核退回: {return_reason}"
+    elif review_conclusion == "通过":
+        plan.status = RepairPlanStatus.APPROVED
+        log_msg = "复核通过"
+    else:
+        plan.status = RepairPlanStatus.REJECTED
+        log_msg = "复核不通过"
+
+    db.commit()
+    log_operation(db, current_user, OperationType.APPROVE if not returned else OperationType.REJECT, "repair_plan", plan_id, log_msg)
+
+    return RedirectResponse(url="/reviews", status_code=status.HTTP_303_SEE_OTHER)
 
 
 if __name__ == "__main__":

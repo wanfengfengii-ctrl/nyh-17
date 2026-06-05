@@ -37,6 +37,18 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link {% if '/repair_plans' in request.url.path %}active{% endif %}" href="/repair_plans">
+                    <i class="bi bi-clipboard-check"></i>
+                    修复方案管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/reviews' in request.url.path %}active{% endif %}" href="/reviews">
+                    <i class="bi bi-journal-check"></i>
+                    专家复核
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link {% if '/underwater_images' in request.url.path %}active{% endif %}" href="/underwater_images">
                     <i class="bi bi-camera"></i>
                     水下影像管理

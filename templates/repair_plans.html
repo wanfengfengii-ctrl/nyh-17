@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}修复方案管理 - 陶片修复协同与审批管理系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-clipboard-check text-primary me-2"></i>修复方案管理
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/repair_plans/add" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>新建方案
+                    </a>
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <form class="row g-3" method="get">
+                        <div class="col-md-3">
+                            <label class="form-label small">状态</label>
+                            <select class="form-select form-select-sm" name="status_filter">
+                                <option value="">全部</option>
+                                <option value="草稿" {% if status_filter == '草稿' %}selected{% endif %}>草稿</option>
+                                <option value="已提交" {% if status_filter == '已提交' %}selected{% endif %}>已提交</option>
+                                <option value="复核中" {% if status_filter == '复核中' %}selected{% endif %}>复核中</option>
+                                <option value="已通过" {% if status_filter == '已通过' %}selected{% endif %}>已通过</option>
+                                <option value="已驳回" {% if status_filter == '已驳回' %}selected{% endif %}>已驳回</option>
+                                <option value="修复中" {% if status_filter == '修复中' %}selected{% endif %}>修复中</option>
+                                <option value="已完成" {% if status_filter == '已完成' %}selected{% endif %}>已完成</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">进度</label>
+                            <select class="form-select form-select-sm" name="progress_filter">
+                                <option value="">全部</option>
+                                <option value="未开始" {% if progress_filter == '未开始' %}selected{% endif %}>未开始</option>
+                                <option value="准备中" {% if progress_filter == '准备中' %}selected{% endif %}>准备中</option>
+                                <option value="清洗中" {% if progress_filter == '清洗中' %}selected{% endif %}>清洗中</option>
+                                <option value="拼合中" {% if progress_filter == '拼合中' %}selected{% endif %}>拼合中</option>
+                                <option value="修复中" {% if progress_filter == '修复中' %}selected{% endif %}>修复中</option>
+                                <option value="补色中" {% if progress_filter == '补色中' %}selected{% endif %}>补色中</option>
+                                <option value="收尾中" {% if progress_filter == '收尾中' %}selected{% endif %}>收尾中</option>
+                                <option value="已完成" {% if progress_filter == '已完成' %}selected{% endif %}>已完成</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">修复责任人</label>
+                            <select class="form-select form-select-sm" name="restorer_filter">
+                                <option value="">全部</option>
+                                {% for u in users %}
+                                <option value="{{ u.id }}" {% if restorer_filter == u.id %}selected{% endif %}>{{ u.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-sm btn-outline-primary me-2">
+                                <i class="bi bi-filter"></i> 筛选
+                            </button>
+                            <a href="/repair_plans" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> 重置
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>方案编号</th>
+                                    <th>方案名称</th>
+                                    <th>陶片</th>
+                                    <th>修复责任人</th>
+                                    <th>状态</th>
+                                    <th>进度</th>
+                                    <th>预计完成</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for plan in plans %}
+                                <tr onclick="window.location='/repair_plans/{{ plan.id }}'" style="cursor: pointer;">
+                                    <td><code class="small">{{ plan.plan_number }}</code></td>
+                                    <td><strong>{{ plan.plan_name }}</strong></td>
+                                    <td>{{ plan.pottery.pottery_number }}</td>
+                                    <td>{{ plan.restorer_name or (plan.restorer.full_name if plan.restorer else '-') }}</td>
+                                    <td>
+                                        {% if plan.status == '草稿' %}
+                                        <span class="badge bg-secondary">草稿</span>
+                                        {% elif plan.status == '已提交' %}
+                                        <span class="badge bg-info">已提交</span>
+                                        {% elif plan.status == '复核中' %}
+                                        <span class="badge bg-warning">复核中</span>
+                                        {% elif plan.status == '已通过' %}
+                                        <span class="badge bg-success">已通过</span>
+                                        {% elif plan.status == '已驳回' %}
+                                        <span class="badge bg-danger">已驳回</span>
+                                        {% elif plan.status == '修复中' %}
+                                        <span class="badge bg-primary">修复中</span>
+                                        {% elif plan.status == '已完成' %}
+                                        <span class="badge bg-success">已完成</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-dark">{{ plan.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress me-2" style="width: 60px; height: 6px;">
+                                                {% set progress_map = {'未开始': 0, '准备中': 10, '清洗中': 25, '拼合中': 40, '修复中': 60, '补色中': 80, '收尾中': 90, '已完成': 100} %}
+                                                {% set p = progress_map.get(plan.progress, 0) %}
+                                                <div class="progress-bar {% if p >= 100 %}bg-success{% elif p >= 60 %}bg-primary{% elif p >= 30 %}bg-warning{% else %}bg-info{% endif %}" style="width: {{ p }}%"></div>
+                                            </div>
+                                            <small>{{ plan.progress }}</small>
+                                        </div>
+                                    </td>
+                                    <td>{{ plan.expected_completion_date|strftime if plan.expected_completion_date else '-' }}</td>
+                                    <td class="small text-muted">{{ plan.created_at|strftime_full }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" onclick="event.stopPropagation()">
+                                            <a href="/repair_plans/{{ plan.id }}" class="btn btn-outline-primary" title="查看详情">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            {% if plan.status not in ['已通过', '已完成'] %}
+                                            <a href="/repair_plans/{{ plan.id }}/edit" class="btn btn-outline-secondary" title="编辑">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">
+                                        <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                                        暂无修复方案数据
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

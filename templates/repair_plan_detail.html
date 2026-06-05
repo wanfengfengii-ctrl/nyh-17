@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}修复方案详情 - 陶片修复协同与审批管理系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-2">
+                            <li class="breadcrumb-item"><a href="/repair_plans">修复方案管理</a></li>
+                            <li class="breadcrumb-item active">方案详情</li>
+                        </ol>
+                    </nav>
+                    <h1 class="h2">
+                        <i class="bi bi-clipboard-check text-primary me-2"></i>{{ plan.plan_name }}
+                    </h1>
+                </div>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    {% if plan.status not in ['已通过', '已完成'] %}
+                    <a href="/repair_plans/{{ plan.id }}/edit" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-pencil me-1"></i>编辑
+                    </a>
+                    {% endif %}
+                    {% if plan.status == '草稿' %}
+                    <form method="post" action="/repair_plans/{{ plan.id }}/submit" class="d-inline">
+                        <button type="submit" class="btn btn-primary" onclick="return confirm('确定提交该方案进行复核吗？')">
+                            <i class="bi bi-send me-1"></i>提交复核
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-8">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-info-circle me-2 text-secondary"></i>基本信息
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">方案编号</label>
+                                    <p class="mb-0"><code>{{ plan.plan_number }}</code></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">状态</label>
+                                    <p class="mb-0">
+                                        {% if plan.status == '草稿' %}
+                                        <span class="badge bg-secondary">草稿</span>
+                                        {% elif plan.status == '已提交' %}
+                                        <span class="badge bg-info">已提交</span>
+                                        {% elif plan.status == '复核中' %}
+                                        <span class="badge bg-warning">复核中</span>
+                                        {% elif plan.status == '已通过' %}
+                                        <span class="badge bg-success">已通过</span>
+                                        {% elif plan.status == '已驳回' %}
+                                        <span class="badge bg-danger">已驳回</span>
+                                        {% elif plan.status == '修复中' %}
+                                        <span class="badge bg-primary">修复中</span>
+                                        {% elif plan.status == '已完成' %}
+                                        <span class="badge bg-success">已完成</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">关联陶片</label>
+                                    <p class="mb-0">
+                                        <a href="/potteries/{{ plan.pottery.id }}">{{ plan.pottery.pottery_number }}</a>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">修复责任人</label>
+                                    <p class="mb-0">{{ plan.restorer_name or (plan.restorer.full_name if plan.restorer else '-') }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">预计工期（天）</label>
+                                    <p class="mb-0">{{ plan.estimated_duration or '-' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">预计完成日期</label>
+                                    <p class="mb-0">{{ plan.expected_completion_date|strftime if plan.expected_completion_date else '-' }}</p>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small text-muted">方案描述</label>
+                                    <p class="mb-0">{{ plan.plan_description or '-' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">修复方法</label>
+                                    <p class="mb-0">{{ plan.repair_method or '-' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">使用材料</label>
+                                    <p class="mb-0">{{ plan.materials_used or '-' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">创建人</label>
+                                    <p class="mb-0">{{ plan.creator.full_name if plan.creator else '-' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">创建时间</label>
+                                    <p class="mb-0">{{ plan.created_at|strftime_full }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-activity me-2 text-secondary"></i>修复进度
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" action="/repair_plans/{{ plan.id }}/progress">
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted">当前进度</label>
+                                    <div class="mb-3">
+                                        {% set progress_map = {'未开始': 0, '准备中': 10, '清洗中': 25, '拼合中': 40, '修复中': 60, '补色中': 80, '收尾中': 90, '已完成': 100} %}
+                                        {% set p = progress_map.get(plan.progress, 0) %}
+                                        <div class="progress mb-2" style="height: 20px;">
+                                            <div class="progress-bar {% if p >= 100 %}bg-success{% elif p >= 60 %}bg-primary{% elif p >= 30 %}bg-warning{% else %}bg-info{% endif %}" role="progressbar" style="width: {{ p }}%" aria-valuenow="{{ p }}" aria-valuemin="0" aria-valuemax="100">
+                                                {{ p }}%
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-secondary">{{ plan.progress }}</span>
+                                    </div>
+                                </div>
+                                {% if plan.status not in ['已完成'] %}
+                                <div class="mb-3">
+                                    <label class="form-label small">更新进度</label>
+                                    <select class="form-select form-select-sm" name="progress" required>
+                                        {% for prog in progresses %}
+                                        <option value="{{ prog }}" {% if plan.progress == prog %}selected{% endif %}>{{ prog }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small">更新状态（可选）</label>
+                                    <select class="form-select form-select-sm" name="status">
+                                        <option value="">不改变</option>
+                                        {% for s in statuses %}
+                                        <option value="{{ s }}" {% if plan.status == s %}selected{% endif %}>{{ s }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary w-100">
+                                    <i class="bi bi-arrow-repeat me-1"></i>更新进度
+                                </button>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-images me-2 text-secondary"></i>修复前后对比
+                    </h5>
+                    {% if plan.status not in ['已完成'] %}
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#uploadImageModal">
+                        <i class="bi bi-upload me-1"></i>上传图片
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if comparison_images %}
+                    <div class="row g-3">
+                        {% for img in comparison_images %}
+                        <div class="col-md-3">
+                            <div class="card h-100">
+                                <img src="{{ img.image_path }}" class="card-img-top" alt="{{ img.image_type }}" style="height: 150px; object-fit: cover;">
+                                <div class="card-body">
+                                    <h6 class="card-title small">{{ img.image_type }}</h6>
+                                    <p class="card-text small text-muted">{{ img.image_stage }}</p>
+                                    <p class="card-text small">{{ img.description }}</p>
+                                </div>
+                                {% if plan.status not in ['已完成'] %}
+                                <div class="card-footer bg-transparent border-top-0">
+                                    <a href="/repair_plans/{{ plan.id }}/images/{{ img.id }}/delete" class="btn btn-sm btn-outline-danger w-100" onclick="return confirm('确定删除此图片吗？')">
+                                        <i class="bi bi-trash"></i> 删除
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-images display-4 d-block mb-2"></i>
+                        暂无对比图片
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-journal-check me-2 text-secondary"></i>复核记录
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if review_records %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>复核人</th>
+                                    <th>复核日期</th>
+                                    <th>复核意见</th>
+                                    <th>结论</th>
+                                    <th>退回原因</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in review_records %}
+                                <tr>
+                                    <td>{{ record.reviewer_name or (record.reviewer.full_name if record.reviewer else '-') }}</td>
+                                    <td>{{ record.review_date|strftime if record.review_date else '-' }}</td>
+                                    <td class="small">{{ record.review_opinion or '-' }}</td>
+                                    <td>
+                                        {% if record.review_conclusion == '通过' %}
+                                        <span class="badge bg-success">{{ record.review_conclusion }}</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">{{ record.review_conclusion }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="small text-danger">{{ record.return_reason or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-journal-check display-4 d-block mb-2"></i>
+                        暂无复核记录
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="modal fade" id="uploadImageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="/repair_plans/{{ plan.id }}/images/upload" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title">上传对比图片</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">选择图片 *</label>
+                        <input type="file" class="form-control" name="image" accept="image/*" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">图片类型 *</label>
+                        <select class="form-select" name="image_type" required>
+                            <option value="">请选择</option>
+                            <option value="修复前">修复前</option>
+                            <option value="修复中">修复中</option>
+                            <option value="修复后">修复后</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">修复阶段 *</label>
+                        <select class="form-select" name="image_stage" required>
+                            <option value="">请选择</option>
+                            <option value="初始状态">初始状态</option>
+                            <option value="清洗后">清洗后</option>
+                            <option value="拼合后">拼合后</option>
+                            <option value="粘接后">粘接后</option>
+                            <option value="补配后">补配后</option>
+                            <option value="补色后">补色后</option>
+                            <option value="完成">完成</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">描述</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">上传</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

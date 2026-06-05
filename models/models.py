@@ -12,6 +12,27 @@ class TaskStatus(str, enum.Enum):
     CANCELLED = "已取消"
 
 
+class RepairPlanStatus(str, enum.Enum):
+    DRAFT = "草稿"
+    SUBMITTED = "已提交"
+    IN_REVIEW = "复核中"
+    APPROVED = "已通过"
+    REJECTED = "已驳回"
+    IN_REPAIR = "修复中"
+    COMPLETED = "已完成"
+
+
+class RepairProgress(str, enum.Enum):
+    NOT_STARTED = "未开始"
+    PREPARING = "准备中"
+    CLEANING = "清洗中"
+    JOINING = "拼合中"
+    RESTORING = "修复中"
+    COLORING = "补色中"
+    FINALIZING = "收尾中"
+    COMPLETED = "已完成"
+
+
 class ApprovalStatus(str, enum.Enum):
     DRAFT = "草稿"
     SUBMITTED = "待审批"
@@ -241,3 +262,82 @@ class UnderwaterImage(Base):
 
     pottery = relationship("Pottery")
     group = relationship("PotteryGroup")
+
+
+class RepairPlan(Base):
+    __tablename__ = "repair_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plan_number = Column(String, unique=True, index=True)
+    pottery_id = Column(Integer, ForeignKey("potteries.id"), nullable=False)
+    group_id = Column(Integer, ForeignKey("pottery_groups.id"), nullable=True)
+    task_id = Column(Integer, ForeignKey("repair_tasks.id"), nullable=True)
+    
+    plan_name = Column(String, nullable=False)
+    plan_description = Column(Text)
+    repair_method = Column(String)
+    materials_used = Column(Text)
+    estimated_duration = Column(Integer)
+    expected_completion_date = Column(Date)
+    
+    status = Column(String, default=RepairPlanStatus.DRAFT)
+    progress = Column(String, default=RepairProgress.NOT_STARTED)
+    
+    restorer_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    restorer_name = Column(String)
+    
+    created_by = Column(Integer, ForeignKey("users.id"))
+    submitted_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    pottery = relationship("Pottery")
+    group = relationship("PotteryGroup")
+    task = relationship("RepairTask", foreign_keys=[task_id])
+    restorer = relationship("User", foreign_keys=[restorer_id])
+    creator = relationship("User", foreign_keys=[created_by])
+    review_records = relationship("ReviewRecord", back_populates="repair_plan", cascade="all, delete-orphan")
+    comparison_images = relationship("RepairComparisonImage", back_populates="repair_plan", cascade="all, delete-orphan")
+
+
+class ReviewRecord(Base):
+    __tablename__ = "review_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    repair_plan_id = Column(Integer, ForeignKey("repair_plans.id"), nullable=False)
+    
+    reviewer_id = Column(Integer, ForeignKey("users.id"))
+    reviewer_name = Column(String)
+    
+    review_opinion = Column(Text)
+    review_conclusion = Column(String)
+    review_date = Column(Date)
+    
+    is_returned = Column(Boolean, default=False)
+    return_reason = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    repair_plan = relationship("RepairPlan", back_populates="review_records")
+    reviewer = relationship("User", foreign_keys=[reviewer_id])
+
+
+class RepairComparisonImage(Base):
+    __tablename__ = "repair_comparison_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    repair_plan_id = Column(Integer, ForeignKey("repair_plans.id"), nullable=False)
+    
+    image_type = Column(String)
+    image_path = Column(String)
+    image_stage = Column(String)
+    description = Column(Text)
+    
+    uploaded_by = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    repair_plan = relationship("RepairPlan", back_populates="comparison_images")
+    uploader = relationship("User", foreign_keys=[uploaded_by])

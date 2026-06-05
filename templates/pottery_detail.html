@@ -168,7 +168,7 @@
                     {% endif %}
                     
                     {% if repair_tasks %}
-                    <div class="card shadow-sm">
+                    <div class="card shadow-sm mb-4">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
                                 <i class="bi bi-list-check me-2 text-secondary"></i>修复任务
@@ -191,6 +191,47 @@
                             </div>
                             {% endfor %}
                         </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if repair_plans %}
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="bi bi-clipboard-check me-2 text-secondary"></i>修复方案
+                            </h5>
+                            <span class="badge bg-warning">{{ repair_plans|length }}</span>
+                        </div>
+                        <div class="card-body">
+                            {% for p in repair_plans %}
+                            <div class="mb-2">
+                                <a href="/repair_plans/{{ p.id }}" class="text-decoration-none">
+                                    <i class="bi bi-file-text me-1"></i>{{ p.plan_name }}
+                                </a>
+                                {% if p.status == '草稿' %}
+                                <span class="badge bg-secondary ms-1">草稿</span>
+                                {% elif p.status == '复核中' %}
+                                <span class="badge bg-warning ms-1">复核中</span>
+                                {% elif p.status == '已通过' %}
+                                <span class="badge bg-success ms-1">已通过</span>
+                                {% elif p.status == '已驳回' %}
+                                <span class="badge bg-danger ms-1">已驳回</span>
+                                {% elif p.status == '修复中' %}
+                                <span class="badge bg-primary ms-1">修复中</span>
+                                {% elif p.status == '已完成' %}
+                                <span class="badge bg-success ms-1">已完成</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if not pottery.is_locked %}
+                    <div class="d-grid mt-4">
+                        <a href="/repair_plans/add?pottery_id={{ pottery.id }}" class="btn btn-outline-primary">
+                            <i class="bi bi-plus-lg me-1"></i>创建修复方案
+                        </a>
                     </div>
                     {% endif %}
                 </div>

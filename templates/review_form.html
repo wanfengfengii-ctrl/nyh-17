@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}专家复核 - 陶片修复协同与审批管理系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-2">
+                            <li class="breadcrumb-item"><a href="/reviews">专家复核</a></li>
+                            <li class="breadcrumb-item active">复核方案</li>
+                        </ol>
+                    </nav>
+                    <h1 class="h2">
+                        <i class="bi bi-journal-check text-primary me-2"></i>专家复核
+                    </h1>
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-info-circle me-2 text-secondary"></i>方案信息 - {{ plan.plan_name }}
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted">方案编号</label>
+                                    <p class="mb-0"><code>{{ plan.plan_number }}</code></p>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted">关联陶片</label>
+                                    <p class="mb-0">
+                                        <a href="/potteries/{{ plan.pottery.id }}">{{ plan.pottery.pottery_number }}</a>
+                                    </p>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted">修复责任人</label>
+                                    <p class="mb-0">{{ plan.restorer_name or (plan.restorer.full_name if plan.restorer else '-') }}</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted">预计完成日期</label>
+                                    <p class="mb-0">{{ plan.expected_completion_date|strftime if plan.expected_completion_date else '-' }}</p>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small text-muted">方案描述</label>
+                                    <p class="mb-0">{{ plan.plan_description or '-' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">修复方法</label>
+                                    <p class="mb-0">{{ plan.repair_method or '-' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">使用材料</label>
+                                    <p class="mb-0">{{ plan.materials_used or '-' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if comparison_images %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-images me-2 text-secondary"></i>修复对比图片
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for img in comparison_images %}
+                        <div class="col-md-3">
+                            <div class="card h-100">
+                                <img src="{{ img.image_path }}" class="card-img-top" alt="{{ img.image_type }}" style="height: 150px; object-fit: cover;">
+                                <div class="card-body">
+                                    <h6 class="card-title small">{{ img.image_type }}</h6>
+                                    <p class="card-text small text-muted">{{ img.image_stage }}</p>
+                                    <p class="card-text small">{{ img.description }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if review_records %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history me-2 text-secondary"></i>历史复核记录
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>复核人</th>
+                                    <th>复核日期</th>
+                                    <th>复核意见</th>
+                                    <th>结论</th>
+                                    <th>退回原因</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in review_records %}
+                                <tr>
+                                    <td>{{ record.reviewer_name or (record.reviewer.full_name if record.reviewer else '-') }}</td>
+                                    <td>{{ record.review_date|strftime if record.review_date else '-' }}</td>
+                                    <td class="small">{{ record.review_opinion or '-' }}</td>
+                                    <td>
+                                        {% if record.review_conclusion == '通过' %}
+                                        <span class="badge bg-success">{{ record.review_conclusion }}</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">{{ record.review_conclusion }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="small text-danger">{{ record.return_reason or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pencil-square me-2 text-secondary"></i>复核意见
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="reviewForm" novalidate>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">复核日期 <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="review_date" 
+                                       value="{{ today }}" max="{{ today }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">复核结论 <span class="text-danger">*</span></label>
+                                <select class="form-select" name="review_conclusion" id="reviewConclusion" required>
+                                    <option value="">请选择结论</option>
+                                    <option value="通过">通过</option>
+                                    <option value="不通过">不通过</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">复核意见</label>
+                                <textarea class="form-control" name="review_opinion" rows="4" 
+                                          placeholder="请详细描述复核意见"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="isReturned" name="is_returned" value="true">
+                                    <label class="form-check-label" for="isReturned">
+                                        退回修改
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-12" id="returnReasonSection" style="display: none;">
+                                <label class="form-label">退回原因 <span class="text-danger">*</span></label>
+                                <textarea class="form-control" name="return_reason" rows="2" id="returnReason"
+                                          placeholder="请填写退回原因"></textarea>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="d-flex justify-content-end">
+                            <a href="/reviews" class="btn btn-outline-secondary me-2">
+                                <i class="bi bi-x-circle me-1"></i>取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>提交复核意见
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isReturnedCheckbox = document.getElementById('isReturned');
+    const returnReasonSection = document.getElementById('returnReasonSection');
+    const returnReason = document.getElementById('returnReason');
+    const reviewConclusion = document.getElementById('reviewConclusion');
+    const form = document.getElementById('reviewForm');
+
+    isReturnedCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            returnReasonSection.style.display = 'block';
+            returnReason.required = true;
+        } else {
+            returnReasonSection.style.display = 'none';
+            returnReason.required = false;
+        }
+    });
+
+    form.addEventListener('submit', function(e) {
+        const reviewDate = form.querySelector('[name="review_date"]');
+        const conclusion = reviewConclusion.value;
+        
+        let isValid = true;
+        
+        if (!reviewDate.value) {
+            reviewDate.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const selectedDate = new Date(reviewDate.value);
+            if (selectedDate > today) {
+                reviewDate.classList.add('is-invalid');
+                isValid = false;
+                alert('复核日期不能晚于当前日期');
+            } else {
+                reviewDate.classList.remove('is-invalid');
+            }
+        }
+        
+        if (!conclusion) {
+            reviewConclusion.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            reviewConclusion.classList.remove('is-invalid');
+        }
+        
+        if (isReturnedCheckbox.checked && !returnReason.value.trim()) {
+            returnReason.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            returnReason.classList.remove('is-invalid');
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        } else {
+            const confirmMsg = isReturnedCheckbox.checked 
+                ? '确定要退回该方案修改吗？' 
+                : (conclusion === '通过' ? '确定通过该修复方案吗？' : '确定不通过该修复方案吗？');
+            if (!confirm(confirmMsg)) {
+                e.preventDefault();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

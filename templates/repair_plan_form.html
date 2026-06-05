@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}{% if plan %}编辑修复方案{% else %}新建修复方案{% endif %} - 陶片修复协同与审批管理系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-2">
+                            <li class="breadcrumb-item"><a href="/repair_plans">修复方案管理</a></li>
+                            <li class="breadcrumb-item active">{% if plan %}编辑方案{% else %}新建方案{% endif %}</li>
+                        </ol>
+                    </nav>
+                    <h1 class="h2">
+                        <i class="bi bi-clipboard-plus text-primary me-2"></i>{% if plan %}编辑修复方案{% else %}新建修复方案{% endif %}
+                    </h1>
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post" id="repairPlanForm" novalidate>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">陶片 <span class="text-danger">*</span></label>
+                                <select class="form-select" name="pottery_id" required>
+                                    <option value="">请选择陶片</option>
+                                    {% for p in potteries %}
+                                    <option value="{{ p.id }}" {% if (plan and plan.pottery_id == p.id) or (selected_pottery and selected_pottery.id == p.id) %}selected{% endif %}>
+                                        {{ p.pottery_number }} - {{ p.water_area }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text text-muted">仅显示未锁定的陶片</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">方案名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="plan_name" 
+                                       value="{{ plan.plan_name if plan else '' }}" 
+                                       placeholder="请输入方案名称" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">关联修复任务</label>
+                                <select class="form-select" name="task_id">
+                                    <option value="">不关联</option>
+                                    {% for t in tasks %}
+                                    <option value="{{ t.id }}" {% if plan and plan.task_id == t.id %}selected{% endif %}>
+                                        {{ t.task_number }} - {{ t.title }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">关联拼合组</label>
+                                <select class="form-select" name="group_id">
+                                    <option value="">不关联</option>
+                                    {% for g in groups %}
+                                    <option value="{{ g.id }}" {% if plan and plan.group_id == g.id %}selected{% endif %}>
+                                        {{ g.group_number }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">方案描述</label>
+                                <textarea class="form-control" name="plan_description" rows="3" 
+                                          placeholder="请详细描述修复方案">{{ plan.plan_description if plan else '' }}</textarea>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">修复方法</label>
+                                <input type="text" class="form-control" name="repair_method" 
+                                       value="{{ plan.repair_method if plan else '' }}" 
+                                       placeholder="例如：拼接、补配、加固等">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">使用材料</label>
+                                <input type="text" class="form-control" name="materials_used" 
+                                       value="{{ plan.materials_used if plan else '' }}" 
+                                       placeholder="例如：环氧树脂、石膏等">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">预计工期（天）</label>
+                                <input type="number" class="form-control" name="estimated_duration" min="1"
+                                       value="{{ plan.estimated_duration if plan else '' }}" 
+                                       placeholder="预计修复天数">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">预计完成日期</label>
+                                <input type="date" class="form-control" name="expected_completion_date"
+                                       value="{{ plan.expected_completion_date.isoformat() if plan and plan.expected_completion_date else today }}">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">修复责任人</label>
+                                <select class="form-select" name="restorer_id">
+                                    <option value="">请选择责任人</option>
+                                    {% for u in users %}
+                                    <option value="{{ u.id }}" {% if plan and plan.restorer_id == u.id %}selected{% endif %}>
+                                        {{ u.full_name }} ({{ u.role }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">责任人姓名（手动填写）</label>
+                                <input type="text" class="form-control" name="restorer_name" 
+                                       value="{{ plan.restorer_name if plan else '' }}" 
+                                       placeholder="责任人姓名">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="d-flex justify-content-end">
+                            <a href="/repair_plans" class="btn btn-outline-secondary me-2">
+                                <i class="bi bi-x-circle me-1"></i>取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>{% if plan %}保存修改{% else %}创建方案{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('repairPlanForm');
+    
+    form.addEventListener('submit', function(e) {
+        const planName = form.querySelector('[name="plan_name"]');
+        const potteryId = form.querySelector('[name="pottery_id"]');
+        const expectedDate = form.querySelector('[name="expected_completion_date"]');
+        
+        let isValid = true;
+        
+        if (!potteryId.value) {
+            potteryId.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            potteryId.classList.remove('is-invalid');
+        }
+        
+        if (!planName.value.trim()) {
+            planName.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            planName.classList.remove('is-invalid');
+        }
+        
+        if (expectedDate.value) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const selectedDate = new Date(expectedDate.value);
+            if (selectedDate < today) {
+                expectedDate.classList.add('is-invalid');
+                isValid = false;
+                alert('预计完成日期不能早于当前日期');
+            } else {
+                expectedDate.classList.remove('is-invalid');
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}
