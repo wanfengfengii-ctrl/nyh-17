@@ -86,6 +86,28 @@
             </div>
             
             <div class="row g-4 mb-5">
+                <div class="col-sm-6 col-xl-4">
+                    <div class="stat-card card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-grow-1">
+                                    <p class="text-muted mb-1">水下影像</p>
+                                    <h3 class="mb-0">{{ underwater_image_stats.total }}</h3>
+                                    <small class="text-primary">
+                                        <i class="bi bi-camera"></i> 照片: {{ underwater_image_stats.photos }}
+                                        <i class="bi bi-box ms-2"></i> 3D: {{ underwater_image_stats.models }}
+                                    </small>
+                                </div>
+                                <div class="avatar-sm bg-primary bg-opacity-10 rounded">
+                                    <i class="bi bi-camera text-primary h4 mb-0 p-2"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-4 mb-5">
                 <div class="col-md-4">
                     <div class="card shadow-sm">
                         <div class="card-body">
@@ -172,8 +194,53 @@
                 </div>
             </div>
             
-            <div class="row g-4">
-                <div class="col-md-6">
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="bi bi-camera me-2 text-secondary"></i>最近水下影像
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>影像编号</th>
+                                            <th>陶片</th>
+                                            <th>类型</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for img in recent_underwater_images %}
+                                        <tr onclick="window.location='/underwater_images/{{ img.id }}'" style="cursor: pointer;">
+                                            <td><code class="small">{{ img.image_number }}</code></td>
+                                            <td>{{ img.pottery.pottery_number }}</td>
+                                            <td>
+                                                {% if img.file_type == '3d' %}
+                                                <span class="badge bg-info">3D模型</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">{{ img.image_type }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-3">暂无影像数据</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="text-center mt-3">
+                                <a href="/underwater_images" class="btn btn-sm btn-outline-primary">
+                                    查看全部 <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-8">
                     <div class="card shadow-sm h-100">
                         <div class="card-body">
                             <h5 class="card-title mb-4">
@@ -226,7 +293,9 @@
                         </div>
                     </div>
                 </div>
-                
+            </div>
+            
+            <div class="row g-4">
                 <div class="col-md-6">
                     <div class="card shadow-sm h-100">
                         <div class="card-body">

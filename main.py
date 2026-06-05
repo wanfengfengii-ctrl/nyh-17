@@ -21,11 +21,12 @@ from database import engine, Base, get_db
 from models import (
     User, Pottery, CleaningRecord, PotteryGroup, PotteryGroupMember, StorageRecord,
     PotteryImage, RepairTask, GroupVersion, StorageApproval, OperationLog,
-    TaskStatus, ApprovalStatus, OperationType
+    TaskStatus, ApprovalStatus, OperationType, UnderwaterImage
 )
 from schemas import (
     PotteryCreate, PotteryUpdate, CleaningRecordCreate, PotteryGroupCreate, PotteryGroupUpdate,
-    StorageRecordCreate, RepairTaskCreate, RepairTaskUpdate, StorageRecordUpdate
+    StorageRecordCreate, RepairTaskCreate, RepairTaskUpdate, StorageRecordUpdate,
+    UnderwaterImageCreate, UnderwaterImageUpdate
 )
 from auth import get_password_hash, authenticate_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
 
@@ -129,11 +130,28 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
     total_tasks = db.query(RepairTask).count()
     pending_tasks = db.query(RepairTask).filter(RepairTask.status == TaskStatus.PENDING).count()
     pending_approvals = db.query(StorageRecord).filter(StorageRecord.approval_status == ApprovalStatus.SUBMITTED).count()
+    
+    total_underwater_images = db.query(UnderwaterImage).count()
+    total_3d_models = db.query(UnderwaterImage).filter(UnderwaterImage.file_type == "3d").count()
+    total_photos = db.query(UnderwaterImage).filter(UnderwaterImage.file_type == "image").count()
+    
+    underwater_image_stats = {
+        "total": total_underwater_images,
+        "photos": total_photos,
+        "models": total_3d_models,
+        "by_water_area": {}
+    }
+    water_areas = [r[0] for r in db.query(UnderwaterImage.water_area).distinct().all() if r[0]]
+    for area in water_areas:
+        underwater_image_stats["by_water_area"][area] = db.query(UnderwaterImage).filter(
+            UnderwaterImage.water_area == area
+        ).count()
 
     recent_potteries = db.query(Pottery).order_by(Pottery.created_at.desc()).limit(5).all()
     recent_groups = db.query(PotteryGroup).order_by(PotteryGroup.created_at.desc()).limit(5).all()
     recent_tasks = db.query(RepairTask).order_by(RepairTask.created_at.desc()).limit(5).all()
     recent_logs = db.query(OperationLog).order_by(OperationLog.created_at.desc()).limit(10).all()
+    recent_underwater_images = db.query(UnderwaterImage).order_by(UnderwaterImage.created_at.desc()).limit(5).all()
 
     damage_stats = {
         "轻微": db.query(Pottery).filter(Pottery.damage_level == "轻微").count(),
@@ -155,7 +173,9 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
         "recent_groups": recent_groups,
         "recent_tasks": recent_tasks,
         "recent_logs": recent_logs,
+        "recent_underwater_images": recent_underwater_images,
         "damage_stats": damage_stats,
+        "underwater_image_stats": underwater_image_stats,
         "today": date.today().isoformat()
     })
 
@@ -1377,6 +1397,273 @@ async def search_page(
         "type": type,
         "results": results
     })
+
+
+@app.get("/underwater_images", response_class=HTMLResponse)
+async def list_underwater_images(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    pottery_id: Optional[int] = None,
+    group_id: Optional[int] = None,
+    water_area: Optional[str] = None,
+    image_type: Optional[str] = None,
+    keyword: Optional[str] = None
+):
+    query = db.query(UnderwaterImage)
+    
+    if pottery_id:
+        query = query.filter(UnderwaterImage.pottery_id == pottery_id)
+    if group_id:
+        query = query.filter(UnderwaterImage.group_id == group_id)
+    if water_area:
+        query = query.filter(UnderwaterImage.water_area == water_area)
+    if image_type:
+        query = query.filter(UnderwaterImage.image_type == image_type)
+    if keyword:
+        query = query.filter(or_(
+            UnderwaterImage.image_number.contains(keyword),
+            UnderwaterImage.description.contains(keyword),
+            UnderwaterImage.photographer.contains(keyword)
+        ))
+    
+    images = query.order_by(UnderwaterImage.created_at.desc()).all()
+    
+    water_areas = [r[0] for r in db.query(UnderwaterImage.water_area).distinct().all() if r[0]]
+    potteries = db.query(Pottery).all()
+    groups = db.query(PotteryGroup).all()
+    
+    return templates.TemplateResponse("underwater_images.html", {
+        "request": request,
+        "current_user": current_user,
+        "images": images,
+        "pottery_id": pottery_id,
+        "group_id": group_id,
+        "water_area": water_area,
+        "image_type": image_type,
+        "keyword": keyword,
+        "water_areas": water_areas,
+        "potteries": potteries,
+        "groups": groups
+    })
+
+
+@app.get("/underwater_images/add", response_class=HTMLResponse)
+async def add_underwater_image_page(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    pottery_id: Optional[int] = None
+):
+    potteries = db.query(Pottery).all()
+    groups = db.query(PotteryGroup).all()
+    selected_pottery = None
+    if pottery_id:
+        selected_pottery = db.query(Pottery).filter(Pottery.id == pottery_id).first()
+    
+    return templates.TemplateResponse("underwater_image_form.html", {
+        "request": request,
+        "current_user": current_user,
+        "image": None,
+        "potteries": potteries,
+        "groups": groups,
+        "selected_pottery": selected_pottery,
+        "today": datetime.now().strftime("%Y-%m-%dT%H:%M")
+    })
+
+
+@app.post("/underwater_images/add")
+async def add_underwater_image(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    pottery_id: int = Form(...),
+    group_id: Optional[int] = Form(None),
+    image_number: str = Form(...),
+    image_type: str = Form(...),
+    file_type: str = Form("image"),
+    description: str = Form(""),
+    coordinate_x: str = Form(""),
+    coordinate_y: str = Form(""),
+    coordinate_z: str = Form(""),
+    depth: str = Form(""),
+    shooting_time: Optional[datetime] = Form(None),
+    photographer: str = Form(""),
+    trench_number: str = Form(""),
+    water_area: str = Form(""),
+    file: UploadFile = File(...)
+):
+    existing = db.query(UnderwaterImage).filter(UnderwaterImage.image_number == image_number).first()
+    if existing:
+        potteries = db.query(Pottery).all()
+        groups = db.query(PotteryGroup).all()
+        return templates.TemplateResponse("underwater_image_form.html", {
+            "request": request,
+            "current_user": current_user,
+            "image": None,
+            "potteries": potteries,
+            "groups": groups,
+            "selected_pottery": None,
+            "today": datetime.now().strftime("%Y-%m-%dT%H:%M"),
+            "error": "影像编号已存在"
+        })
+    
+    file_ext = os.path.splitext(file.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    
+    with open(file_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+    
+    pottery = db.query(Pottery).filter(Pottery.id == pottery_id).first()
+    if pottery and not water_area:
+        water_area = pottery.water_area
+    if pottery and not trench_number:
+        trench_number = pottery.trench_number
+    
+    image = UnderwaterImage(
+        pottery_id=pottery_id,
+        group_id=group_id,
+        image_number=image_number,
+        image_type=image_type,
+        file_type=file_type,
+        file_path=f"/{file_path}",
+        description=description,
+        coordinate_x=coordinate_x,
+        coordinate_y=coordinate_y,
+        coordinate_z=coordinate_z,
+        depth=depth,
+        shooting_time=shooting_time,
+        photographer=photographer,
+        trench_number=trench_number,
+        water_area=water_area,
+        uploaded_by=current_user.id
+    )
+    db.add(image)
+    db.commit()
+    db.refresh(image)
+    
+    log_operation(db, current_user, OperationType.UPLOAD, "underwater_image", image.id, f"上传水下影像: {image_number}")
+    
+    return RedirectResponse(url="/underwater_images", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/underwater_images/{image_id}", response_class=HTMLResponse)
+async def underwater_image_detail(
+    image_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    image = db.query(UnderwaterImage).filter(UnderwaterImage.id == image_id).first()
+    if not image:
+        return RedirectResponse(url="/underwater_images", status_code=status.HTTP_303_SEE_OTHER)
+    
+    pottery_images = db.query(UnderwaterImage).filter(
+        UnderwaterImage.pottery_id == image.pottery_id
+    ).order_by(UnderwaterImage.shooting_time.asc()).all()
+    
+    timeline_data = []
+    for img in pottery_images:
+        timeline_data.append({
+            "id": img.id,
+            "image_number": img.image_number,
+            "shooting_time": img.shooting_time,
+            "image_type": img.image_type,
+            "file_path": img.file_path,
+            "description": img.description,
+            "is_current": img.id == image_id
+        })
+    
+    return templates.TemplateResponse("underwater_image_detail.html", {
+        "request": request,
+        "current_user": current_user,
+        "image": image,
+        "timeline_data": timeline_data
+    })
+
+
+@app.get("/underwater_images/{image_id}/edit", response_class=HTMLResponse)
+async def edit_underwater_image_page(
+    image_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    image = db.query(UnderwaterImage).filter(UnderwaterImage.id == image_id).first()
+    if not image:
+        return RedirectResponse(url="/underwater_images", status_code=status.HTTP_303_SEE_OTHER)
+    
+    potteries = db.query(Pottery).all()
+    groups = db.query(PotteryGroup).all()
+    
+    return templates.TemplateResponse("underwater_image_form.html", {
+        "request": request,
+        "current_user": current_user,
+        "image": image,
+        "potteries": potteries,
+        "groups": groups,
+        "selected_pottery": None,
+        "today": datetime.now().strftime("%Y-%m-%dT%H:%M")
+    })
+
+
+@app.post("/underwater_images/{image_id}/edit")
+async def edit_underwater_image(
+    image_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    group_id: Optional[int] = Form(None),
+    image_type: str = Form(...),
+    description: str = Form(""),
+    coordinate_x: str = Form(""),
+    coordinate_y: str = Form(""),
+    coordinate_z: str = Form(""),
+    depth: str = Form(""),
+    shooting_time: Optional[datetime] = Form(None),
+    photographer: str = Form(""),
+    trench_number: str = Form(""),
+    water_area: str = Form("")
+):
+    image = db.query(UnderwaterImage).filter(UnderwaterImage.id == image_id).first()
+    if not image:
+        return RedirectResponse(url="/underwater_images", status_code=status.HTTP_303_SEE_OTHER)
+    
+    image.group_id = group_id
+    image.image_type = image_type
+    image.description = description
+    image.coordinate_x = coordinate_x
+    image.coordinate_y = coordinate_y
+    image.coordinate_z = coordinate_z
+    image.depth = depth
+    image.shooting_time = shooting_time
+    image.photographer = photographer
+    image.trench_number = trench_number
+    image.water_area = water_area
+    
+    db.commit()
+    log_operation(db, current_user, OperationType.UPDATE, "underwater_image", image_id, f"更新水下影像: {image.image_number}")
+    
+    return RedirectResponse(url=f"/underwater_images/{image_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/underwater_images/{image_id}/delete")
+async def delete_underwater_image(
+    image_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    image = db.query(UnderwaterImage).filter(UnderwaterImage.id == image_id).first()
+    if image:
+        if os.path.exists(image.file_path.lstrip("/")):
+            os.remove(image.file_path.lstrip("/"))
+        db.delete(image)
+        db.commit()
+        log_operation(db, current_user, OperationType.DELETE, "underwater_image", image_id, f"删除水下影像: {image.image_number}")
+    
+    return RedirectResponse(url="/underwater_images", status_code=status.HTTP_303_SEE_OTHER)
 
 
 if __name__ == "__main__":

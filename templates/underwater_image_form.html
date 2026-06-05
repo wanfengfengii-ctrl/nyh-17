@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}{% if image %}编辑水下影像{% else %}新增水下影像{% endif %} - 水下考古陶片拼合编目系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-{% if image %}pencil{% else %}plus-circle{% endif %} text-primary me-2"></i>
+                    {% if image %}编辑水下影像{% else %}新增水下影像{% endif %}
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/underwater_images" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>返回列表
+                    </a>
+                </div>
+            </div>
+            
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="image_number" class="form-label">影像编号 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="image_number" name="image_number" 
+                                   value="{{ image.image_number if image else '' }}" 
+                                   {% if image %}readonly{% endif %} required>
+                            {% if image %}<small class="text-muted">编号不可修改</small>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pottery_id" class="form-label">关联陶片 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="pottery_id" name="pottery_id" required>
+                                <option value="">请选择陶片</option>
+                                {% for p in potteries %}
+                                <option value="{{ p.id }}" {% if (image and image.pottery_id == p.id) or (selected_pottery and selected_pottery.id == p.id) %}selected{% endif %}>
+                                    {{ p.pottery_number }} - {{ p.material }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="group_id" class="form-label">关联拼合组</label>
+                            <select class="form-select" id="group_id" name="group_id">
+                                <option value="">请选择拼合组</option>
+                                {% for g in groups %}
+                                <option value="{{ g.id }}" {% if image and image.group_id == g.id %}selected{% endif %}>
+                                    {{ g.group_number }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="image_type" class="form-label">影像类型 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="image_type" name="image_type" required>
+                                <option value="">请选择</option>
+                                <option value="现场照片" {% if image and image.image_type == '现场照片' %}selected{% endif %}>现场照片</option>
+                                <option value="三维模型" {% if image and image.image_type == '三维模型' %}selected{% endif %}>三维模型</option>
+                                <option value="细节特写" {% if image and image.image_type == '细节特写' %}selected{% endif %}>细节特写</option>
+                                <option value="全景图" {% if image and image.image_type == '全景图' %}selected{% endif %}>全景图</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="file_type" class="form-label">文件类型</label>
+                            <select class="form-select" id="file_type" name="file_type">
+                                <option value="image" {% if image and image.file_type == 'image' %}selected{% endif %}>图片</option>
+                                <option value="3d" {% if image and image.file_type == '3d' %}selected{% endif %}>三维模型</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="file" class="form-label">{% if image %}文件（留空则不修改）{% else %}上传文件 <span class="text-danger">*</span>{% endif %}</label>
+                            <input type="file" class="form-control" id="file" name="file" {% if not image %}required{% endif %}>
+                        </div>
+                        
+                        <div class="col-12 pt-3 border-top">
+                            <h6 class="text-primary">
+                                <i class="bi bi-geo-alt me-1"></i>空间定位信息
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="coordinate_x" class="form-label">X坐标</label>
+                            <input type="text" class="form-control" id="coordinate_x" name="coordinate_x" 
+                                   placeholder="例如: 116.397128" 
+                                   value="{{ image.coordinate_x if image else '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="coordinate_y" class="form-label">Y坐标</label>
+                            <input type="text" class="form-control" id="coordinate_y" name="coordinate_y" 
+                                   placeholder="例如: 39.916527" 
+                                   value="{{ image.coordinate_y if image else '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="coordinate_z" class="form-label">Z坐标</label>
+                            <input type="text" class="form-control" id="coordinate_z" name="coordinate_z" 
+                                   placeholder="例如: 0" 
+                                   value="{{ image.coordinate_z if image else '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="depth" class="form-label">水深（米）</label>
+                            <input type="text" class="form-control" id="depth" name="depth" 
+                                   placeholder="例如: 12.5" 
+                                   value="{{ image.depth if image else '' }}">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="water_area" class="form-label">出水区域</label>
+                            <input type="text" class="form-control" id="water_area" name="water_area" 
+                                   placeholder="选择陶片后自动填充" 
+                                   value="{{ image.water_area if image else '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="trench_number" class="form-label">探方编号</label>
+                            <input type="text" class="form-control" id="trench_number" name="trench_number" 
+                                   placeholder="选择陶片后自动填充" 
+                                   value="{{ image.trench_number if image else '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="shooting_time" class="form-label">拍摄时间</label>
+                            <input type="datetime-local" class="form-control" id="shooting_time" name="shooting_time" 
+                                   value="{{ image.shooting_time.strftime('%Y-%m-%dT%H:%M') if image and image.shooting_time else today }}">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="photographer" class="form-label">摄影人员</label>
+                            <input type="text" class="form-control" id="photographer" name="photographer" 
+                                   placeholder="请输入摄影人员姓名" 
+                                   value="{{ image.photographer if image else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="description" class="form-label">描述说明</label>
+                            <input type="text" class="form-control" id="description" name="description" 
+                                   placeholder="请输入影像描述" 
+                                   value="{{ image.description if image else '' }}">
+                        </div>
+                        
+                        <div class="col-12 pt-4 border-top">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-save me-1"></i>保存
+                            </button>
+                            <a href="/underwater_images" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>取消
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+document.getElementById('pottery_id').addEventListener('change', function() {
+    const potteryId = this.value;
+    if (potteryId) {
+        fetch(`/potteries/${potteryId}`)
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const waterArea = doc.querySelector('.water-area-value');
+                const trenchNumber = doc.querySelector('.trench-number-value');
+            });
+    }
+});
+</script>
+{% endblock %}

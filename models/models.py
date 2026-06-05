@@ -211,3 +211,33 @@ class OperationLog(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="operation_logs")
+
+
+class UnderwaterImage(Base):
+    __tablename__ = "underwater_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pottery_id = Column(Integer, ForeignKey("potteries.id"), nullable=False)
+    group_id = Column(Integer, ForeignKey("pottery_groups.id"), nullable=True)
+    image_number = Column(String, unique=True, index=True)
+    image_type = Column(String, default="现场照片")
+    file_path = Column(String)
+    file_type = Column(String, default="image")
+    description = Column(Text)
+    
+    coordinate_x = Column(String)
+    coordinate_y = Column(String)
+    coordinate_z = Column(String)
+    depth = Column(String)
+    
+    shooting_time = Column(DateTime)
+    photographer = Column(String)
+    trench_number = Column(String)
+    water_area = Column(String)
+    
+    uploaded_by = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    pottery = relationship("Pottery")
+    group = relationship("PotteryGroup")

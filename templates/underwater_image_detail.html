@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}水下影像详情 - 水下考古陶片拼合编目系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-image text-primary me-2"></i>水下影像详情
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/underwater_images/{{ image.id }}/edit" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-pencil me-1"></i>编辑
+                    </a>
+                    <a href="/underwater_images" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>返回列表
+                    </a>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-eye me-1"></i>影像预览
+                        </div>
+                        <div class="card-body text-center">
+                            {% if image.file_type == 'image' %}
+                            <img src="{{ image.file_path }}" class="img-fluid rounded" alt="{{ image.image_number }}" 
+                                 style="max-height: 500px; object-fit: contain;">
+                            {% else %}
+                            <div class="bg-light rounded p-5">
+                                <i class="bi bi-box-seam text-muted" style="font-size: 4rem;"></i>
+                                <p class="text-muted mt-3 mb-0">三维模型文件</p>
+                                <p class="text-muted small">{{ image.file_path }}</p>
+                                <a href="{{ image.file_path }}" class="btn btn-primary mt-3" download>
+                                    <i class="bi bi-download me-1"></i>下载模型文件
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <i class="bi bi-clock-history me-1"></i>同陶片影像时间线
+                        </div>
+                        <div class="card-body">
+                            <div class="timeline">
+                                {% for item in timeline_data %}
+                                <div class="timeline-item {% if item.is_current %}active{% endif %}">
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1">
+                                                    {% if item.is_current %}
+                                                    <span class="text-primary"><strong>{{ item.image_number }}</strong></span>
+                                                    {% else %}
+                                                    <a href="/underwater_images/{{ item.id }}" class="text-decoration-none">
+                                                        {{ item.image_number }}
+                                                    </a>
+                                                    {% endif %}
+                                                    <span class="badge {% if item.file_type == '3d' %}bg-info{% else %}bg-secondary{% endif %} ms-2">
+                                                        {{ item.image_type }}
+                                                    </span>
+                                                </h6>
+                                                <p class="small text-muted mb-1">
+                                                    <i class="bi bi-calendar me-1"></i>
+                                                    {{ item.shooting_time.strftime('%Y-%m-%d %H:%M') if item.shooting_time else '未知' }}
+                                                </p>
+                                                {% if item.description %}
+                                                <p class="small mb-0">{{ item.description }}</p>
+                                                {% endif %}
+                                            </div>
+                                            {% if not item.is_current %}
+                                            <a href="/underwater_images/{{ item.id }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <p class="text-muted text-center py-3">暂无其他影像</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-info-circle me-1"></i>基本信息
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="text-muted">影像编号</td>
+                                    <td class="text-end"><strong>{{ image.image_number }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">影像类型</td>
+                                    <td class="text-end">
+                                        {% if image.file_type == '3d' %}
+                                        <span class="badge bg-info">3D模型</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ image.image_type }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">关联陶片</td>
+                                    <td class="text-end">
+                                        <a href="/potteries/{{ image.pottery.id }}" class="text-decoration-none">
+                                            {{ image.pottery.pottery_number }}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% if image.group %}
+                                <tr>
+                                    <td class="text-muted">关联拼合组</td>
+                                    <td class="text-end">
+                                        <a href="/groups/{{ image.group.id }}" class="text-decoration-none">
+                                            {{ image.group.group_number }}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td class="text-muted">摄影人员</td>
+                                    <td class="text-end">{{ image.photographer or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">拍摄时间</td>
+                                    <td class="text-end">
+                                        {{ image.shooting_time.strftime('%Y-%m-%d %H:%M') if image.shooting_time else '-' }}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-geo-alt me-1"></i>空间信息
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="text-muted">出水区域</td>
+                                    <td class="text-end">{{ image.water_area or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">探方编号</td>
+                                    <td class="text-end">{{ image.trench_number or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">X 坐标</td>
+                                    <td class="text-end">{{ image.coordinate_x or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Y 坐标</td>
+                                    <td class="text-end">{{ image.coordinate_y or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Z 坐标</td>
+                                    <td class="text-end">{{ image.coordinate_z or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">水深</td>
+                                    <td class="text-end">{{ image.depth + ' 米' if image.depth else '-' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    {% if image.description %}
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <i class="bi bi-file-text me-1"></i>描述说明
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-0">{{ image.description }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+.timeline-item:last-child {
+    margin-bottom: 0;
+}
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #dee2e6;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 1px #dee2e6;
+}
+.timeline-item.active .timeline-marker {
+    background: #0d6efd;
+    box-shadow: 0 0 0 1px #0d6efd;
+}
+.timeline-content {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px;
+}
+.timeline-item.active .timeline-content {
+    background: #e7f1ff;
+    border: 1px solid #b6d4fe;
+}
+</style>
+{% endblock %}

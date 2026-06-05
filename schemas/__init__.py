@@ -9,5 +9,6 @@ from schemas.schemas import (
     GroupVersion, GroupVersionCreate,
     StorageRecord, StorageRecordCreate, StorageRecordUpdate,
     StorageApproval, StorageApprovalCreate,
-    OperationLog, OperationLogCreate
+    OperationLog, OperationLogCreate,
+    UnderwaterImage, UnderwaterImageCreate, UnderwaterImageUpdate
 )

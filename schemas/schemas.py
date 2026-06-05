@@ -307,3 +307,50 @@ class OperationLog(OperationLogBase):
 
     class Config:
         from_attributes = True
+
+
+class UnderwaterImageBase(BaseModel):
+    pottery_id: int
+    group_id: Optional[int] = None
+    image_number: str
+    image_type: Optional[str] = "现场照片"
+    file_type: Optional[str] = "image"
+    description: Optional[str] = None
+    coordinate_x: Optional[str] = None
+    coordinate_y: Optional[str] = None
+    coordinate_z: Optional[str] = None
+    depth: Optional[str] = None
+    shooting_time: Optional[datetime] = None
+    photographer: Optional[str] = None
+    trench_number: Optional[str] = None
+    water_area: Optional[str] = None
+
+
+class UnderwaterImageCreate(UnderwaterImageBase):
+    file_path: str
+    uploaded_by: int
+
+
+class UnderwaterImageUpdate(BaseModel):
+    group_id: Optional[int] = None
+    image_type: Optional[str] = None
+    description: Optional[str] = None
+    coordinate_x: Optional[str] = None
+    coordinate_y: Optional[str] = None
+    coordinate_z: Optional[str] = None
+    depth: Optional[str] = None
+    shooting_time: Optional[datetime] = None
+    photographer: Optional[str] = None
+    trench_number: Optional[str] = None
+    water_area: Optional[str] = None
+
+
+class UnderwaterImage(UnderwaterImageBase):
+    id: int
+    file_path: str
+    uploaded_by: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

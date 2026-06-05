@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}水下影像管理 - 水下考古陶片拼合编目系统{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        {% include "sidebar.html" %}
+        
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+                <h1 class="h2">
+                    <i class="bi bi-camera text-primary me-2"></i>水下影像管理
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="/underwater_images/add" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>新增影像
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">关键词搜索</label>
+                            <input type="text" class="form-control" name="keyword" value="{{ keyword or '' }}" placeholder="影像编号、描述、摄影人员...">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">关联陶片</label>
+                            <select class="form-select" name="pottery_id">
+                                <option value="">全部</option>
+                                {% for p in potteries %}
+                                <option value="{{ p.id }}" {% if pottery_id == p.id %}selected{% endif %}>{{ p.pottery_number }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">关联拼合组</label>
+                            <select class="form-select" name="group_id">
+                                <option value="">全部</option>
+                                {% for g in groups %}
+                                <option value="{{ g.id }}" {% if group_id == g.id %}selected{% endif %}>{{ g.group_number }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">出水区域</label>
+                            <select class="form-select" name="water_area">
+                                <option value="">全部</option>
+                                {% for area in water_areas %}
+                                <option value="{{ area }}" {% if water_area == area %}selected{% endif %}>{{ area }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">影像类型</label>
+                            <select class="form-select" name="image_type">
+                                <option value="">全部</option>
+                                <option value="现场照片" {% if image_type == '现场照片' %}selected{% endif %}>现场照片</option>
+                                <option value="三维模型" {% if image_type == '三维模型' %}selected{% endif %}>三维模型</option>
+                                <option value="细节特写" {% if image_type == '细节特写' %}selected{% endif %}>细节特写</option>
+                                <option value="全景图" {% if image_type == '全景图' %}selected{% endif %}>全景图</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>影像编号</th>
+                                    <th>关联陶片</th>
+                                    <th>影像类型</th>
+                                    <th>出水区域</th>
+                                    <th>坐标/深度</th>
+                                    <th>拍摄时间</th>
+                                    <th>摄影人员</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for img in images %}
+                                <tr>
+                                    <td><strong>{{ img.image_number }}</strong></td>
+                                    <td>{{ img.pottery.pottery_number if img.pottery else '-' }}</td>
+                                    <td>
+                                        {% if img.file_type == '3d' %}
+                                        <span class="badge bg-info">3D模型</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ img.image_type }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ img.water_area or '-' }}</td>
+                                    <td>
+                                        {% if img.depth %}
+                                        <small>深度: {{ img.depth }}m</small>
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ img.shooting_time.strftime('%Y-%m-%d %H:%M') if img.shooting_time else '-' }}</td>
+                                    <td>{{ img.photographer or '-' }}</td>
+                                    <td>
+                                        <a href="/underwater_images/{{ img.id }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="/underwater_images/{{ img.id }}/edit" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="/underwater_images/{{ img.id }}/delete" class="btn btn-sm btn-outline-danger" onclick="return confirm('确定要删除该影像吗？')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="bi bi-images" style="font-size: 2rem;"></i>
+                                        <p class="mt-2 mb-0">暂无水下影像数据</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
