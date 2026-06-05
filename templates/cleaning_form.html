@@ -24,6 +24,13 @@
                 正在为陶片 <strong>{{ pottery.pottery_number }}</strong> 添加清洗记录
             </div>
             
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+            
             <div class="card shadow-sm">
                 <div class="card-body">
                     <form method="POST" class="row g-3">

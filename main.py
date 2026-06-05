@@ -89,7 +89,8 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
         "total_stored": total_stored,
         "recent_potteries": recent_potteries,
         "recent_groups": recent_groups,
-        "damage_stats": damage_stats
+        "damage_stats": damage_stats,
+        "today": date.today().isoformat()
     })
 
 
@@ -299,6 +300,7 @@ async def add_cleaning_page(
 @app.post("/potteries/{pottery_id}/cleaning/add")
 async def add_cleaning(
     pottery_id: int,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     cleaning_date: date = Form(...),
@@ -310,6 +312,15 @@ async def add_cleaning(
     pottery = db.query(Pottery).filter(Pottery.id == pottery_id).first()
     if not pottery:
         return RedirectResponse(url="/potteries", status_code=status.HTTP_303_SEE_OTHER)
+
+    if cleaning_date > date.today():
+        return templates.TemplateResponse("cleaning_form.html", {
+            "request": request,
+            "current_user": current_user,
+            "pottery": pottery,
+            "today": date.today().isoformat(),
+            "error": "清洗日期不能晚于当前日期"
+        })
 
     cleaning = CleaningRecord(
         pottery_id=pottery_id,
@@ -411,6 +422,49 @@ async def add_group(
             "error": "拼合可信度范围为0-100"
         })
 
+    for pid in pottery_ids:
+        official_storage = db.query(StorageRecord).filter(
+            StorageRecord.pottery_id == pid,
+            StorageRecord.is_official == True
+        ).first()
+        if official_storage:
+            pottery = db.query(Pottery).filter(Pottery.id == pid).first()
+            stored_pottery_ids = [r[0] for r in db.query(StorageRecord.pottery_id).filter(StorageRecord.is_official == True).all()]
+            active_group_members = db.query(PotteryGroupMember.pottery_id).join(PotteryGroup).filter(PotteryGroup.is_completed == False).all()
+            active_pottery_ids = [r[0] for r in active_group_members]
+            excluded_ids = stored_pottery_ids + active_pottery_ids
+            available_potteries = db.query(Pottery).filter(~Pottery.id.in_(excluded_ids)).all()
+            
+            return templates.TemplateResponse("group_form.html", {
+                "request": request,
+                "current_user": current_user,
+                "group": None,
+                "available_potteries": available_potteries,
+                "selected_potteries": [p for p in pottery_ids if p != pid],
+                "error": f"陶片 {pottery.pottery_number if pottery else pid} 已正式入库，无法加入拼合组"
+            })
+
+        in_other_group = db.query(PotteryGroupMember).join(PotteryGroup).filter(
+            PotteryGroupMember.pottery_id == pid,
+            PotteryGroup.is_completed == False
+        ).first()
+        if in_other_group:
+            pottery = db.query(Pottery).filter(Pottery.id == pid).first()
+            stored_pottery_ids = [r[0] for r in db.query(StorageRecord.pottery_id).filter(StorageRecord.is_official == True).all()]
+            active_group_members = db.query(PotteryGroupMember.pottery_id).join(PotteryGroup).filter(PotteryGroup.is_completed == False).all()
+            active_pottery_ids = [r[0] for r in active_group_members]
+            excluded_ids = stored_pottery_ids + active_pottery_ids
+            available_potteries = db.query(Pottery).filter(~Pottery.id.in_(excluded_ids)).all()
+            
+            return templates.TemplateResponse("group_form.html", {
+                "request": request,
+                "current_user": current_user,
+                "group": None,
+                "available_potteries": available_potteries,
+                "selected_potteries": [p for p in pottery_ids if p != pid],
+                "error": f"陶片 {pottery.pottery_number if pottery else pid} 已在其他进行中的拼合组中"
+            })
+
     group = PotteryGroup(
         group_number=group_number,
         confidence=confidence,
@@ -487,6 +541,21 @@ async def edit_group(
     if not group:
         return RedirectResponse(url="/groups", status_code=status.HTTP_303_SEE_OTHER)
 
+    has_official = any(m.pottery.storage_record and m.pottery.storage_record.is_official for m in group.members)
+    
+    current_member_ids = {m.pottery_id for m in group.members}
+    new_member_ids = set(pottery_ids)
+    
+    if has_official and current_member_ids != new_member_ids:
+        groups = db.query(PotteryGroup).order_by(PotteryGroup.created_at.desc()).all()
+        return templates.TemplateResponse("groups.html", {
+            "request": request,
+            "current_user": current_user,
+            "groups": groups,
+            "is_completed": None,
+            "error": "该拼合组包含已正式入库的陶片，无法修改组成员"
+        })
+
     if confidence < 0 or confidence > 100:
         stored_pottery_ids = [r[0] for r in db.query(StorageRecord.pottery_id).filter(StorageRecord.is_official == True).all()]
         active_group_members = db.query(PotteryGroupMember.pottery_id).join(PotteryGroup).filter(
@@ -506,16 +575,68 @@ async def edit_group(
             "error": "拼合可信度范围为0-100"
         })
 
+    if not has_official:
+        for pid in pottery_ids:
+            if pid not in current_member_ids:
+                official_storage = db.query(StorageRecord).filter(
+                    StorageRecord.pottery_id == pid,
+                    StorageRecord.is_official == True
+                ).first()
+                if official_storage:
+                    pottery = db.query(Pottery).filter(Pottery.id == pid).first()
+                    stored_pottery_ids = [r[0] for r in db.query(StorageRecord.pottery_id).filter(StorageRecord.is_official == True).all()]
+                    active_group_members = db.query(PotteryGroupMember.pottery_id).join(PotteryGroup).filter(
+                        PotteryGroup.is_completed == False,
+                        PotteryGroup.id != group_id
+                    ).all()
+                    active_pottery_ids = [r[0] for r in active_group_members]
+                    excluded_ids = stored_pottery_ids + active_pottery_ids
+                    available_potteries = db.query(Pottery).filter(~Pottery.id.in_(excluded_ids)).all()
+                    
+                    return templates.TemplateResponse("group_form.html", {
+                        "request": request,
+                        "current_user": current_user,
+                        "group": group,
+                        "available_potteries": available_potteries,
+                        "selected_potteries": [p for p in pottery_ids if p != pid],
+                        "error": f"陶片 {pottery.pottery_number if pottery else pid} 已正式入库，无法加入拼合组"
+                    })
+
+                in_other_group = db.query(PotteryGroupMember).join(PotteryGroup).filter(
+                    PotteryGroupMember.pottery_id == pid,
+                    PotteryGroup.is_completed == False,
+                    PotteryGroup.id != group_id
+                ).first()
+                if in_other_group:
+                    pottery = db.query(Pottery).filter(Pottery.id == pid).first()
+                    stored_pottery_ids = [r[0] for r in db.query(StorageRecord.pottery_id).filter(StorageRecord.is_official == True).all()]
+                    active_group_members = db.query(PotteryGroupMember.pottery_id).join(PotteryGroup).filter(
+                        PotteryGroup.is_completed == False,
+                        PotteryGroup.id != group_id
+                    ).all()
+                    active_pottery_ids = [r[0] for r in active_group_members]
+                    excluded_ids = stored_pottery_ids + active_pottery_ids
+                    available_potteries = db.query(Pottery).filter(~Pottery.id.in_(excluded_ids)).all()
+                    
+                    return templates.TemplateResponse("group_form.html", {
+                        "request": request,
+                        "current_user": current_user,
+                        "group": group,
+                        "available_potteries": available_potteries,
+                        "selected_potteries": [p for p in pottery_ids if p != pid],
+                        "error": f"陶片 {pottery.pottery_number if pottery else pid} 已在其他进行中的拼合组中"
+                    })
+
     group.confidence = confidence
     group.organizer = organizer
     group.notes = notes
     group.is_completed = is_completed == "true"
 
-    db.query(PotteryGroupMember).filter(PotteryGroupMember.group_id == group_id).delete()
-
-    for pid in pottery_ids:
-        member = PotteryGroupMember(group_id=group.id, pottery_id=pid)
-        db.add(member)
+    if not has_official:
+        db.query(PotteryGroupMember).filter(PotteryGroupMember.group_id == group_id).delete()
+        for pid in pottery_ids:
+            member = PotteryGroupMember(group_id=group.id, pottery_id=pid)
+            db.add(member)
 
     db.commit()
     return RedirectResponse(url="/groups", status_code=status.HTTP_303_SEE_OTHER)
@@ -589,6 +710,7 @@ async def add_storage_page(
 
 @app.post("/storage/add")
 async def add_storage(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     pottery_id: int = Form(...),
@@ -601,6 +723,18 @@ async def add_storage(
     existing = db.query(StorageRecord).filter(StorageRecord.pottery_id == pottery_id).first()
     if existing:
         return RedirectResponse(url="/storage", status_code=status.HTTP_303_SEE_OTHER)
+
+    if storage_date > date.today():
+        stored_ids = [r[0] for r in db.query(StorageRecord.pottery_id).all()]
+        available_potteries = db.query(Pottery).filter(~Pottery.id.in_(stored_ids)).all()
+        return templates.TemplateResponse("storage_form.html", {
+            "request": request,
+            "current_user": current_user,
+            "record": None,
+            "available_potteries": available_potteries,
+            "today": date.today().isoformat(),
+            "error": "入库日期不能晚于当前日期"
+        })
 
     record = StorageRecord(
         pottery_id=pottery_id,
